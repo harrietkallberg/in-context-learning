@@ -75,11 +75,13 @@ def get_relevant_baselines(task_name):
         "bs_flat": [
             (LeastSquaresModel, {}),
             (NNModel, {"n_neighbors": 3}),
+            (BSPriorMeanModel, {"task_name": "bs_flat"}),
             (BSCalibrationModel, {"task_name": "bs_flat", "vol_model": "bs_flat"}),
         ],
         "bs_smile": [
             (LeastSquaresModel, {}),
             (NNModel, {"n_neighbors": 3}),
+            (BSPriorMeanModel, {"task_name": "bs_smile"}),
             (BSCalibrationModel, {"task_name": "bs_smile", "vol_model": "bs_flat"}),
             (BSCalibrationModel, {"task_name": "bs_smile", "vol_model": "bs_smile"}),
         ],
@@ -499,6 +501,7 @@ class BSCalibrationModel:
         self.vol_cls = BS_TASKS[vol_model]
         self.grid_points = grid_points
         self.refine_rounds = refine_rounds
+        self.prior_mean = BSPriorMeanModel(task_name)  # prediction with no examples
         self.name = f"bs_calibration_vol={vol_model}"
 
     def prices(self, m, T, params):
@@ -551,10 +554,35 @@ class BSCalibrationModel:
         preds = []
         for i in inds:
             if i == 0:
-                preds.append(torch.zeros_like(ys[:, 0]))  # predict the prior mean
+                preds.append(self.prior_mean(xs[:, :1], ys[:, :1])[:, 0])
                 continue
             params = self.refine(
                 m[:, :i], T[:, :i], ys[:, :i], coarse[:, i - 1], step, low, high
             )
             preds.append(self.prices(m[:, i], T[:, i], params))
         return torch.stack(preds, dim=1)
+
+
+# Black-Scholes without context: price each query at the prior-mean price
+# E[C/S | m, T], averaging over draws of the volatility parameters. It ignores
+# the in-context examples, so it measures what the fixed price surface alone
+# explains; improvement below it is in-context learning of the volatility.
+class BSPriorMeanModel:
+    def __init__(self, task_name, prior_samples=1024):
+        self.data_cls = BS_TASKS[task_name]
+        generator = torch.Generator().manual_seed(0)
+        self.params = self.data_cls.sample_params(prior_samples, generator)
+        self.name = "bs_prior_mean"
+
+    def __call__(self, xs, ys, inds=None):
+        xs = xs.cpu()
+        if inds is None:
+            inds = range(ys.shape[1])
+        else:
+            if max(inds) >= ys.shape[1] or min(inds) < 0:
+                raise ValueError("inds contain indices where xs and ys are not defined")
+
+        m, T = bs_features(xs[:, list(inds)])
+        m, T = m.unsqueeze(-1), T.unsqueeze(-1)
+        prices = bs_call_over_spot(m, T, self.data_cls.vol(m, self.params))
+        return self.data_cls.standardize(prices).mean(dim=-1)

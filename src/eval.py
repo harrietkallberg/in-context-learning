@@ -353,6 +353,8 @@ def baseline_names(name):
         return "Greedy Tree Learning"
     if "xgboost" in name:
         return "XGBoost"
+    if name == "bs_prior_mean":
+        return "BS prior mean (no context)"
     if name.startswith("bs_calibration_vol="):
         vol_model = name.split("=")[1][len("bs_"):]
         return f"BS calibration ({vol_model})"
