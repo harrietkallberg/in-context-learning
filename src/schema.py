@@ -40,6 +40,8 @@ TASK_LIST = [
     "linear_classification",
     "relu_2nn_regression",
     "decision_tree",
+    "bs_flat",
+    "bs_smile",
 ]
 
 training_schema = {

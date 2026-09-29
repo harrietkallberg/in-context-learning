@@ -11,7 +11,7 @@ import yaml
 
 import models
 from samplers import get_data_sampler, sample_transformation
-from tasks import get_task_sampler
+from tasks import BS_TASKS, get_task_sampler
 
 
 def get_model_from_run(run_path, step=-1, only_conf=False):
@@ -212,6 +212,10 @@ def build_evals(conf):
     if task_name != "linear_regression":
         if task_name in ["relu_2nn_regression"]:
             evaluation_kwargs["linear_regression"] = {"task_name": "linear_regression"}
+        if task_name in BS_TASKS:
+            # "standard" uses clean prices for every model, so this pair gives
+            # both the clean and noisy evaluation whatever the training noise was
+            evaluation_kwargs["noisy"] = {"task_sampler_kwargs": {"noise_std": 0.05}}
         for name, kwargs in evaluation_kwargs.items():
             # allow kwargs to override base_kwargs values
             evaluation_kwargs[name] = base_kwargs.copy()
@@ -349,6 +353,9 @@ def baseline_names(name):
         return "Greedy Tree Learning"
     if "xgboost" in name:
         return "XGBoost"
+    if name.startswith("bs_calibration_vol="):
+        vol_model = name.split("=")[1][len("bs_"):]
+        return f"BS calibration ({vol_model})"
     return name
 
 

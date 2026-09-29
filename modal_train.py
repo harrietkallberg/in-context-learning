@@ -60,6 +60,12 @@ app = modal.App("harriet-in-context-learning", image=image)
     secrets=[modal.Secret.from_name("harriet-wandb")],
 )
 def train(config: str, test: bool, run_id: str):
+    import torch
+
+    # train.py falls back to CPU silently; on Modal that would burn hours unnoticed
+    if not torch.cuda.is_available():
+        raise RuntimeError("No GPU visible in the container")
+
     cmd = ["python", "train.py", "--config", config]
     if test:
         cmd += ["--test_run", "True"]
