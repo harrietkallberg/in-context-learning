@@ -60,7 +60,7 @@ These correspond to the paper's Fig. 2 (linear), Fig. 4/8/9 (linear, out-of-dist
 | Platform | University cluster | Modal serverless containers (Debian slim) |
 | Linear regression, d = 20 | ~7 h | ~5 h (26–29 steps/s) |
 | Decision tree | ~17 h | ~6.5 h estimated in the first minute; will increase as prompts lengthen |
-| Pre-emption | n/a | Modal may pre-empt a GPU container. It restarts automatically (up to 10 retries) and resumes from the last `state.pt`, so up to 1000 steps may be repeated. |
+| Pre-emption | n/a | Modal may pre-empt a GPU container. It restarts automatically (up to 10 retries) and resumes from the last `state.pt` committed to the volume. Commits happen every 5 min and checkpoints every 1000 steps, so up to ~5 min + 1000 steps (≈ 9000 steps at 26 steps/s) may be repeated, and wandb then receives repeated step numbers. The four reproduction runs use the original non-atomic `torch.save`, so a commit taken mid-save could leave a truncated `state.pt`. Later runs write to a temp file and rename it. |
 
 ### 3. Software environment
 | Package | `environment.yml` (authors) | Modal image (us) |
@@ -110,6 +110,26 @@ None of these change the training computation on a GPU.
 ### 7. Other notes
 - **ReLU width:** upstream commit `3383371` changed the ReLU-network hidden width from 4 to 100 in the config and in `tasks.py`. r = 100 matches the paper (§5, App. A.2) and the released pretrained config.
 - **Noise level in the noisy-regression evaluation:** stated as ε ~ N(0, 1) in §4 and as N(0, d/20) in App. B.2. These are identical for d = 20.
+
+## Extension: in-context option pricing (Black–Scholes)
+
+A new function class in the same framework. **Each prompt is one underlying with a hidden volatility.** The in-context examples are other options on that underlying (moneyness, maturity) → price, and the query is a new option. To price it, the model must implicitly calibrate the volatility from the examples.
+
+| | `bs_flat` | `bs_smile` |
+|---|---|---|
+| Hidden per prompt | σ ~ U[0.1, 0.5] | σ(m) = σ₀ + b·m + c·m², clipped at 0.05; σ₀ ~ U[0.15, 0.4], b ~ U[−0.4, 0], c ~ U[0, 1] |
+| Inputs x ∈ ℝ² (Gaussian, as in the paper) | mapped to log-moneyness m = ln(K/S) = 0.2·x₀ and maturity T = 0.1 + 1.9·Φ(x₁) ∈ [0.1, 2] years | same |
+| Target | Black–Scholes call price C/S with r = 2%, standardised by the prior's mean and std (fixed-seed Monte Carlo), so the trivial estimator has error ≈ 1 | same |
+| What it tests | Implied-volatility inversion in context. One example determines σ in principle. | Learning the smile shape. Needs ≥ 3 examples. |
+
+- **Model and training:** identical to the paper's Standard model, lr, batch size and steps; configs `conf/bs_flat.yaml` and `conf/bs_smile.yaml` inherit `base.yaml`. Points curriculum 11→41 (+2 every 2000 steps), as for linear regression. No dimension curriculum, since n_dims = 2.
+- **Baselines:** least squares on x and 3-NN (from the paper), plus **BS calibration**. BS calibration fits the vol parameters to the examples by least squares (a global grid, then 5 rounds of local refinement) and prices the query. On `bs_smile` it is computed both with the correct smile model (the optimal estimator, error ~1e-5 at 40 examples) and with a flat-vol model (misspecified, error ~1e-2). This shows whether the Transformer uses the smile.
+- **Implementation:** `src/tasks.py` (`BlackScholesFlat`, `BlackScholesSmile`), `src/models.py` (`BSCalibrationModel`), `src/schema.py`, `src/eval.py`, `src/plot_utils.py`. In wandb, `excess_loss` for these tasks equals the standardised MSE.
+- **Training is noise-free**, as in the paper.
+- **Evaluation:**
+  - `standard`: clean prices.
+  - `noisy`: standardised prices + ε, ε ~ N(0, 0.05²), on examples and query. That is 0.005·S, about 5% of an at-the-money 1-year option's price, a bid–ask-like level. The error floor on noisy targets is 0.05² = 0.0025.
+  - This mirrors the paper's noisy-linear-regression test (§4, Fig. 4b), where the model is trained clean and tested on noisy outputs. The paper runs that test only for linear regression; we run it for the BS models. Under Gaussian noise, least-squares calibration is the maximum-likelihood estimator, so it remains the reference.
 
 ## Not reproduced
 - Model capacity (Tiny 0.2M, Small 1.2M) × dimension d ∈ {10, 30, 40, 50}, 3 seeds each (§6, Fig. 6, 10, 11)

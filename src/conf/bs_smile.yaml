@@ -1,0 +1,22 @@
+inherit: 
+    - base.yaml
+
+model:
+    n_dims: 2
+
+training:
+    task: bs_smile
+    curriculum:
+        dims:
+            start: 2
+            end: 2
+        points:
+            start: 11
+            end: 41
+            inc: 2
+            interval: 2000
+
+out_dir: ../models/bs_smile
+
+wandb:
+    name: "bs_smile_standard"

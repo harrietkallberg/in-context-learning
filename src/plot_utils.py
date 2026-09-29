@@ -5,6 +5,7 @@ import seaborn as sns
 
 from eval import get_run_metrics, baseline_names, get_model_from_run
 from models import build_model
+from tasks import BS_TASKS
 
 sns.set_theme("notebook", "darkgrid")
 palette = sns.color_palette("colorblind")
@@ -36,6 +37,19 @@ relevant_model_names = {
         "Least Squares",
         "3-Nearest Neighbors",
         "2-layer NN, GD",
+    ],
+    "bs_flat": [
+        "Transformer",
+        "Least Squares",
+        "3-Nearest Neighbors",
+        "BS calibration (flat)",
+    ],
+    "bs_smile": [
+        "Transformer",
+        "Least Squares",
+        "3-Nearest Neighbors",
+        "BS calibration (flat)",
+        "BS calibration (smile)",
     ],
 }
 
@@ -92,14 +106,14 @@ def collect_results(run_dir, df, valid_row=None, rename_eval=None, rename_model=
                 n_dims = conf.model.n_dims
 
                 xlim = 2 * n_dims + 1
-                if r.task in ["relu_2nn_regression", "decision_tree"]:
+                if r.task in ["relu_2nn_regression", "decision_tree", *BS_TASKS]:
                     xlim = 200
 
                 normalization = n_dims
                 if r.task == "sparse_linear_regression":
                     normalization = int(r.kwargs.split("=")[-1])
-                if r.task == "decision_tree":
-                    normalization = 1
+                if r.task in ["decision_tree", *BS_TASKS]:
+                    normalization = 1  # targets already standardized
 
                 for k, v in m.items():
                     v = v[:xlim]

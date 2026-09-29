@@ -9,6 +9,7 @@ from sklearn import tree
 import xgboost as xgb
 
 from base_models import NeuralNetwork, ParallelNetworks
+from tasks import BS_TASKS, bs_call_over_spot, bs_features
 
 
 def build_model(conf):
@@ -70,6 +71,17 @@ def get_relevant_baselines(task_name):
             (DecisionTreeModel, {"max_depth": None}),
             (XGBoostModel, {}),
             (AveragingModel, {}),
+        ],
+        "bs_flat": [
+            (LeastSquaresModel, {}),
+            (NNModel, {"n_neighbors": 3}),
+            (BSCalibrationModel, {"task_name": "bs_flat", "vol_model": "bs_flat"}),
+        ],
+        "bs_smile": [
+            (LeastSquaresModel, {}),
+            (NNModel, {"n_neighbors": 3}),
+            (BSCalibrationModel, {"task_name": "bs_smile", "vol_model": "bs_flat"}),
+            (BSCalibrationModel, {"task_name": "bs_smile", "vol_model": "bs_smile"}),
         ],
     }
 
@@ -475,4 +487,74 @@ class XGBoostModel:
 
             preds.append(pred)
 
+        return torch.stack(preds, dim=1)
+
+
+# Black-Scholes calibration: fit the volatility parameters of `vol_model` to the
+# in-context prices by least squares, then price the query option. The fit is a
+# global grid search followed by rounds of local grid refinement.
+class BSCalibrationModel:
+    def __init__(self, task_name, vol_model, grid_points=12, refine_rounds=5):
+        self.data_cls = BS_TASKS[task_name]  # defines the target standardization
+        self.vol_cls = BS_TASKS[vol_model]
+        self.grid_points = grid_points
+        self.refine_rounds = refine_rounds
+        self.name = f"bs_calibration_vol={vol_model}"
+
+    def prices(self, m, T, params):
+        return self.data_cls.standardize(
+            bs_call_over_spot(m, T, self.vol_cls.vol(m, params))
+        )
+
+    def coarse_fit(self, m, T, ys, chunk_size=1024):
+        # best grid point for every prefix of examples: (b, n, P)
+        low, high = torch.tensor(self.vol_cls.param_ranges).T
+        axes = [torch.linspace(lo, hi, self.grid_points) for lo, hi in zip(low, high)]
+        grid = torch.cartesian_prod(*axes).reshape(-1, len(axes))
+        best_sse = torch.full(ys.shape, float("inf"))
+        best = torch.zeros(*ys.shape, len(axes))
+        for chunk in grid.split(chunk_size):
+            prices = self.prices(m.unsqueeze(-1), T.unsqueeze(-1), chunk)
+            sse = (prices - ys.unsqueeze(-1)).square().cumsum(dim=1)
+            chunk_sse, idx = sse.min(dim=-1)
+            improved = chunk_sse < best_sse
+            best_sse[improved] = chunk_sse[improved]
+            best[improved] = chunk[idx][improved]
+        step = (high - low) / (self.grid_points - 1)
+        return best, step, low, high
+
+    def refine(self, m, T, ys, params, step, low, high):
+        # local 5^P grid around each prompt's current fit, halving the spacing
+        n_params = params.shape[-1]
+        unit = torch.cartesian_prod(*[torch.linspace(-1, 1, 5)] * n_params)
+        unit = unit.reshape(-1, n_params)
+        for _ in range(self.refine_rounds):
+            candidates = (params.unsqueeze(1) + unit * step).clamp(low, high)
+            candidates = candidates.unsqueeze(1)  # (b, 1, L, P)
+            prices = self.prices(m.unsqueeze(-1), T.unsqueeze(-1), candidates)
+            sse = (prices - ys.unsqueeze(-1)).square().sum(dim=1)
+            params = candidates[torch.arange(len(params)), 0, sse.argmin(dim=1)]
+            step = step / 2
+        return params
+
+    def __call__(self, xs, ys, inds=None):
+        xs, ys = xs.cpu(), ys.cpu()
+        if inds is None:
+            inds = range(ys.shape[1])
+        else:
+            if max(inds) >= ys.shape[1] or min(inds) < 0:
+                raise ValueError("inds contain indices where xs and ys are not defined")
+
+        m, T = bs_features(xs)
+        coarse, step, low, high = self.coarse_fit(m, T, ys)
+
+        preds = []
+        for i in inds:
+            if i == 0:
+                preds.append(torch.zeros_like(ys[:, 0]))  # predict the prior mean
+                continue
+            params = self.refine(
+                m[:, :i], T[:, :i], ys[:, :i], coarse[:, i - 1], step, low, high
+            )
+            preds.append(self.prices(m[:, i], T[:, i], params))
         return torch.stack(preds, dim=1)
