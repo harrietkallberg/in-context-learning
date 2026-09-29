@@ -131,6 +131,25 @@ def gen_overlapping_train_test(data_sampler, n_points, b_size):
     return xs_train_pre, xs_test_post
 
 
+# Black-Scholes shifts: examples on one side of a feature, query on the other.
+# x0 > 0 is m = ln(K/S) > 0 (out-of-the-money call); x1 < 0 is T below ~1.05y.
+def split_feature(data_sampler, n_points, b_size, dim, train_sign):
+    xs = data_sampler.sample_xs(n_points, b_size)
+    xs_train_pre, xs_test_post = xs.clone(), xs.clone()
+    xs_train_pre[..., dim] = train_sign * xs[..., dim].abs()
+    xs_test_post[..., dim] = -train_sign * xs[..., dim].abs()
+
+    return xs_train_pre, xs_test_post
+
+
+def gen_otm_to_itm(data_sampler, n_points, b_size):
+    return split_feature(data_sampler, n_points, b_size, dim=0, train_sign=1)
+
+
+def gen_short_to_long(data_sampler, n_points, b_size):
+    return split_feature(data_sampler, n_points, b_size, dim=1, train_sign=-1)
+
+
 def aggregate_metrics(metrics, bootstrap_trials=1000):
     """
     Takes as input a tensor of shape (num_eval, n_points) and returns a dict with
@@ -216,6 +235,13 @@ def build_evals(conf):
             # "standard" uses clean prices for every model, so this pair gives
             # both the clean and noisy evaluation whatever the training noise was
             evaluation_kwargs["noisy"] = {"task_sampler_kwargs": {"noise_std": 0.05}}
+            # distribution shift (paper §4) without retraining
+            evaluation_kwargs["otm_to_itm"] = {"prompting_strategy": "otm_to_itm"}
+            evaluation_kwargs["short_to_long"] = {"prompting_strategy": "short_to_long"}
+            for scale in [2, 3]:  # wider moneyness range, maturity unchanged
+                evaluation_kwargs[f"scale-m={scale}"] = {
+                    "data_sampler_kwargs": {"scale": torch.diag(torch.tensor([scale, 1.0]))}
+                }
         for name, kwargs in evaluation_kwargs.items():
             # allow kwargs to override base_kwargs values
             evaluation_kwargs[name] = base_kwargs.copy()

@@ -131,6 +131,27 @@ A new function class in the same framework. **Each prompt is one underlying with
   - `standard`: clean prices.
   - `noisy`: standardised prices + ε, ε ~ N(0, 0.05²), on examples and query. That is 0.005·S, about 5% of an at-the-money 1-year option's price, a bid–ask-like level. The error floor on noisy targets is 0.05² = 0.0025.
   - This mirrors the paper's noisy-linear-regression test (§4, Fig. 4b), where the model is trained clean and tested on noisy outputs. The paper runs that test only for linear regression; we run it for the BS models. Under Gaussian noise, least-squares calibration is the maximum-likelihood estimator, so it remains the reference.
+  - Distribution shift, the counterpart of the paper's §4, on the trained models without retraining. The vol prior is unchanged, so BS calibration stays exact and remains the reference.
+    - `otm_to_itm`: examples are out-of-the-money calls (m > 0), the query is in the money (m < 0).
+    - `short_to_long`: examples have T below the median (~1.05 years), the query above it.
+    - `scale-m=2`, `scale-m=3`: moneyness scaled by 2 or 3, so |m| reaches values rarely seen in training; maturity unchanged.
+    - The split evals use the paper's train/test prompt mechanism (`xs_p`), as for `opposite_quadrants`. These shifts change the no-context floor (e.g. deep in- or out-of-the-money prices depend little on σ), so compare the Transformer against the BS prior mean of the same eval, not against 0.14 / 0.07.
+    - Not included, because they need changes to the task and baselines: σ outside the prior (the calibration grid only covers the prior), a different r (not an input; it changes the pricing rule, closer to proposal A below), and maturity outside [0.1, 2] (impossible, since T = 0.1 + 1.9·Φ(x₁) maps every x₁ into that range).
+
+## Extended proposal: letting the pricing rule vary in context
+Not implemented. In `bs_flat` / `bs_smile` the pricing formula is the same in every prompt, so a trained model can store it in its weights and only the vol has to come from the context. These extensions make more of the task in-context.
+
+**A. Mixed pricing models.** Each prompt draws a model (Black–Scholes, Bachelier/normal, Merton jump-diffusion) and its parameters; the model must infer which rule generated the examples.
+- Fits the current framework: same (m, T) inputs, one new task class.
+- Baselines: calibration under each model, plus model selection by best fit (the Bayes-style reference), and the no-context prior mean over the mixture.
+- Effort: one task, one set of baselines, one training run. Closest to "one more task".
+
+**B. Learning the risk-neutral distribution.** Each prompt has a hidden risk-neutral distribution at one maturity (e.g. a mixture of lognormals with mean equal to the forward, so prices are arbitrage-free and closed-form). Examples are prices of payoffs across strikes; the query can be a different payoff (digital, put spread). By Breeden–Litzenberger, call prices across strikes determine the distribution, so the model must learn the pricing measure in context, not a parameter.
+- Needs design beyond a new task class:
+  - Input encoding: strike plus a payoff-type feature (n_dims changes).
+  - Training mixes payoff types within prompts, because the framework trains a prediction at every position; a model trained on calls only never learns to output a digital. The key test is then an eval-only split: calls in the context, a digital as the query.
+  - Baselines: mixture fit by least squares (optimal when the family is known) and a model-free Breeden–Litzenberger estimate (smooth fit of C(K), digital = −∂C/∂K).
+- Effort: a written spec first, then the task, baselines, new evals and training. Probably also a smaller model size (Small, 1.2M) to see where in-context learning breaks down.
 
 ## Not reproduced
 - Model capacity (Tiny 0.2M, Small 1.2M) × dimension d ∈ {10, 30, 40, 50}, 3 seeds each (§6, Fig. 6, 10, 11)
