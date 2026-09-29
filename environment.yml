@@ -3,7 +3,7 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - pip=21.2.4
+  - pip
   - python=3.8.12
   - pytorch=1.11.0
   - pip:
