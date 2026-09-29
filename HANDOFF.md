@@ -41,7 +41,7 @@ Repeat per row of the table. Check afterwards that `models/<task>/<id>/config.ya
 
 **Already in local `models/`:**
 - `models/<task>/pretrained/`: the authors' released checkpoints and `metrics.json` for the four paper tasks. This is the numeric reference for "our model vs the paper's model".
-- `models/linear_regression/74966892-…` and `models/linear_regression/f381526c-…`: old local toy runs (5k steps), both named `linear_regression_toy`. `read_run_dir` asserts unique wandb names across all runs, so these two make it fail. Ask the user before moving them out of `models/` (e.g. to `models_toy/`); do not delete.
+- Nothing else. Two old local toy runs (5k steps, both named `linear_regression_toy`) were moved to `models_toy/linear_regression/` (git-ignored), because `read_run_dir` asserts unique wandb names across all runs under `models/`.
 
 ## 3. Evals to compute
 
@@ -87,7 +87,6 @@ Use `src/eval.ipynb` (`run_dir = "../models"`): set `task` and `run_id`, then it
 
 1. Wait for all six runs; check `metrics.json` exists for each.
 2. Download the six folders into `models/<task>/<id>`.
-3. Ask the user about moving the two `linear_regression_toy` runs out of `models/`.
-4. Run `get_run_metrics` for the two BS runs (section 3).
-5. Make the plots (section 4): the paper tasks next to `pretrained`, and the BS tasks with the prior-mean floor.
-6. Write the results into `experimental_setup.md` (or a results section): for each figure, whether our curve matches the paper's and where it differs.
+3. Run `get_run_metrics` for the two BS runs (section 3).
+4. Make the plots (section 4): the paper tasks next to `pretrained`, and the BS tasks with the prior-mean floor.
+5. Write the results into `experimental_setup.md` (or a results section): for each figure, whether our curve matches the paper's and where it differs.
