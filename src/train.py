@@ -16,6 +16,8 @@ from models import build_model
 
 import wandb
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 torch.backends.cudnn.benchmark = True
 
 
@@ -42,7 +44,7 @@ def train(model, args):
     starting_step = 0
     state_path = os.path.join(args.out_dir, "state.pt")
     if os.path.exists(state_path):
-        state = torch.load(state_path)
+        state = torch.load(state_path, map_location=device)
         model.load_state_dict(state["model_state_dict"])
         optimizer.load_state_dict(state["optimizer_state_dict"])
         starting_step = state["train_step"]
@@ -86,11 +88,11 @@ def train(model, args):
 
         loss_func = task.get_training_metric()
 
-        loss, output = train_step(model, xs.cuda(), ys.cuda(), optimizer, loss_func)
+        loss, output = train_step(model, xs.to(device), ys.to(device), optimizer, loss_func)
 
         point_wise_tags = list(range(curriculum.n_points))
         point_wise_loss_func = task.get_metric()
-        point_wise_loss = point_wise_loss_func(output, ys.cuda()).mean(dim=0)
+        point_wise_loss = point_wise_loss_func(output, ys.to(device)).mean(dim=0)
 
         baseline_loss = (
             sum(
@@ -152,7 +154,7 @@ def main(args):
         )
 
     model = build_model(args.model)
-    model.cuda()
+    model.to(device)
     model.train()
 
     train(model, args)

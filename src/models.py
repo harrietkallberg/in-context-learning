@@ -322,7 +322,8 @@ class GDModel:
         # prediction made at all indices by default.
         # xs: bsize X npoints X ndim.
         # ys: bsize X npoints.
-        xs, ys = xs.cuda(), ys.cuda()
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        xs, ys = xs.to(device), ys.to(device)
 
         if inds is None:
             inds = range(ys.shape[1])
@@ -338,7 +339,7 @@ class GDModel:
             model = ParallelNetworks(
                 ys.shape[0], self.model_class, **self.model_class_args
             )
-            model.cuda()
+            model.to(device)
             if i > 0:
                 pred = torch.zeros_like(ys[:, 0])
 

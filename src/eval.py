@@ -25,11 +25,11 @@ def get_model_from_run(run_path, step=-1, only_conf=False):
 
     if step == -1:
         state_path = os.path.join(run_path, "state.pt")
-        state = torch.load(state_path)
+        state = torch.load(state_path, map_location="cpu")
         model.load_state_dict(state["model_state_dict"])
     else:
         model_path = os.path.join(run_path, f"model_{step}.pt")
-        state_dict = torch.load(model_path)
+        state_dict = torch.load(model_path, map_location="cpu")
         model.load_state_dict(state_dict)
 
     return model, conf
@@ -295,7 +295,8 @@ def get_run_metrics(
         all_models = []
     else:
         model, conf = get_model_from_run(run_path, step)
-        model = model.cuda().eval()
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = model.to(device).eval()
         all_models = [model]
         if not skip_baselines:
             all_models += models.get_relevant_baselines(conf.training.task)
@@ -309,7 +310,7 @@ def get_run_metrics(
         save_path = os.path.join(run_path, f"metrics_{step}.json")
 
     recompute = False
-    if save_path is not None and os.path.exists(save_path):
+    if not skip_model_load and save_path is not None and os.path.exists(save_path):
         checkpoint_created = os.path.getmtime(run_path)
         cache_created = os.path.getmtime(save_path)
         if checkpoint_created > cache_created:
