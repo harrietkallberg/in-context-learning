@@ -28,7 +28,6 @@ relevant_model_names = {
     "decision_tree": [
         "Transformer",
         "3-Nearest Neighbors",
-        "2-layer NN, GD",
         "Greedy Tree Learning",
         "XGBoost",
     ],
@@ -56,8 +55,13 @@ relevant_model_names = {
 }
 
 
-def basic_plot(metrics, models=None, trivial=1.0):
-    fig, ax = plt.subplots(1, 1)
+def basic_plot(metrics, models=None, trivial=1.0, ax=None):
+    # pass ax to draw into an existing figure (e.g. side-by-side panels)
+    new_fig = ax is None
+    if new_fig:
+        fig, ax = plt.subplots(1, 1)
+    else:
+        fig = ax.figure
 
     if models is not None:
         metrics = {k: metrics[k] for k in models}
@@ -76,7 +80,8 @@ def basic_plot(metrics, models=None, trivial=1.0):
     ax.set_ylim(-0.1, 1.25)
 
     legend = ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-    fig.set_size_inches(4, 3)
+    if new_fig:
+        fig.set_size_inches(4, 3)
     for line in legend.get_lines():
         line.set_linewidth(3)
 
