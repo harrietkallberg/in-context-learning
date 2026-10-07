@@ -15,3 +15,8 @@
 - Built Lesson 2 (Black–Scholes in four lines) and the reusable `assets/bs.js` (mirrors `src/tasks.py`; checked against the Python to 6 digits) and `assets/calibrate.js` (k = 1 calibration game). Added `reference/black-scholes.html`.
 - Mission draft still unconfirmed: Harriet hasn't said whether this is a thesis/course project, or given a deadline.
 - No learning records yet: no evidence of learning has come back (quiz scores, explanations). Ask how lessons 1–2 went before writing any.
+
+## Session 3 (2026-10-07)
+- Lesson 3 (reading our results) plus `assets/posterior.js`, a k = 1 posterior-vs-one-fit widget with an SVG smile fan and 1,000-stock scoring.
+- Verified by simulation (4,000 stocks): at k = 1 on bs_smile the posterior mean gets 0.0099 and a random exact fit 0.0196 (ratio 1.98; theory 2). The trained models get Transformer 0.0107 and smile calibration 0.0211. So the Transformer ≈ Bayes-optimal at k = 1. This is a strong, paper-worthy point.
+- Harriet asked "what is ndtr?" between lessons: torch's standard normal CDF wasn't obvious. Name library functions explicitly in lessons.

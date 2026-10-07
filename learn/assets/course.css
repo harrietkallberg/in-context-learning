@@ -217,3 +217,19 @@ nav.course a { margin-right: 1rem; }
 .calib-result { margin-top: 0.8rem; }
 .calib-result:empty { display: none; }
 @media print { .calib { display: none; } }
+
+/* ---------- posterior widget (see posterior.js) ---------- */
+.posterior { margin: 1.6rem 0; padding: 1rem; border: 1px solid var(--rule); background: #fff; font-size: 0.95rem; }
+.post-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.post-panels figure { margin: 0; }
+.post-panels figcaption { font-size: 0.78rem; color: var(--muted); line-height: 1.35; margin-top: 0.3rem; }
+.post-svg { width: 100%; height: auto; display: block; }
+.post-read { margin: 0.8rem 0 0; }
+.post-score table { margin-top: 0.8rem; }
+@media (max-width: 40rem) { .post-panels { grid-template-columns: 1fr; } }
+@media print { .posterior { display: none; } }
+
+/* ---------- figures ---------- */
+figure.plot { margin: 1.4rem 0; }
+figure.plot img { width: 100%; height: auto; border: 1px solid var(--rule); }
+figure.plot figcaption { font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; }

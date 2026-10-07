@@ -104,7 +104,7 @@
 <ol>
   <li><strong>The paper isn't written.</strong> <code>neurips_2026.tex</code> is still the unedited template, and HANDOFF step 5 (write results into <code>experimental_setup.md</code>) isn't done.</li>
   <li><strong>The "optimal" reference isn't exact.</strong> With noise-free prices and k ≥ 3, smile calibration should reach ~0 error, yet it sits at 3e-4 at k = 10. The grid + local search runs out of resolution or gets stuck in local minima. Fix: a proper optimiser (Gauss–Newton / L-BFGS from several starts) before calling it the optimum.</li>
-  <li><strong>No Bayes-optimal baseline for small k and noise.</strong> The posterior mean (the average over the prior weighted by fit) is the true optimum where least squares is underdetermined or noisy. Without it, "beats calibration at k = 1" can't be interpreted.</li>
+  <li><strong>No Bayes-optimal baseline for small k and noise.</strong> The posterior mean (the average over the prior weighted by fit) is the true optimum where least squares is underdetermined or noisy. A quick simulation at k = 1 (<a href="../lessons/0003-reading-our-results.html">Lesson 3</a>) gives a posterior mean of 0.0099 vs the Transformer's 0.0107, so the model is close to Bayes-optimal there. Making that a real baseline in <code>models.py</code>, for every k and the noisy eval, would turn this into a headline result.</li>
   <li><strong>One seed per task.</strong> Fine for the reproduction (the paper did the same for these figures). For the new BS claims, a reviewer will ask for 3 seeds.</li>
   <li><strong>The scale-m failure isn't analysed.</strong> Is it the input range (x₀ up to ±9, never seen), or the price regime? A test that separates the two: same m range but rescaled x.</li>
   <li><strong>Relative metric.</strong> The shifts move the no-context floor (0.073 to 0.22), so report the Transformer error ÷ prior-mean error per eval.</li>
@@ -115,6 +115,7 @@
 <nav class="course">
   <a href="../lessons/0001-one-prompt-one-hidden-function.html">Lesson 1</a>
   <a href="../lessons/0002-black-scholes-in-four-lines.html">Lesson 2</a>
+  <a href="../lessons/0003-reading-our-results.html">Lesson 3</a>
   <a href="glossary.html">Glossary</a>
 </nav>
 </main>
