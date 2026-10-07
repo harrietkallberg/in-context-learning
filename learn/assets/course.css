@@ -195,3 +195,25 @@ nav.course a { margin-right: 1rem; }
   h2, h3 { break-after: avoid; }
   table, .quiz, .key { break-inside: avoid; }
 }
+
+/* ---------- calibration widget (see calibrate.js) ---------- */
+.calib { margin: 1.6rem 0; padding: 1rem; border: 1px solid var(--rule); background: #fff; font-size: 0.95rem; }
+.calib p { margin: 0 0 0.35rem; }
+.calib-row { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.7rem; }
+.calib-label { text-transform: uppercase; letter-spacing: 0.06em; margin-right: 0.5rem; }
+.calib-card { background: var(--paper); border-left: 3px solid var(--rule); padding: 0.6rem 0.8rem; margin: 0.6rem 0; }
+.calib-h { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.calib-slider { display: block; margin: 1rem 0 0.3rem; }
+.calib-slider input { display: block; width: 100%; margin-top: 0.4rem; accent-color: var(--accent); }
+.calib-fit .ok { color: var(--good); font-weight: 600; }
+.calib-fit .off { color: var(--bad); }
+.calib-buttons button {
+  font: inherit; font-size: 0.85rem; margin: 0.6rem 0.4rem 0 0; padding: 0.4rem 0.7rem;
+  background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; cursor: pointer; color: var(--ink);
+}
+.calib-buttons button:hover:not(:disabled) { border-color: var(--accent); }
+.calib-buttons .lock { background: var(--accent); color: #fff; border-color: var(--accent); }
+.calib-buttons button:disabled { opacity: 0.45; cursor: default; }
+.calib-result { margin-top: 0.8rem; }
+.calib-result:empty { display: none; }
+@media print { .calib { display: none; } }
