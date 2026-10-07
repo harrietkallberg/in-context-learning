@@ -1,0 +1,57 @@
+\begin{table}[h]
+    \caption{Finance terms used in this paper.}
+    \label{tab:glossary}
+    \centering
+    \small
+    \begin{tabular}{@{}p{0.22\linewidth} p{0.45\linewidth} p{0.27\linewidth}@{}}
+      \toprule
+      Term & Meaning & Answers the question \\
+      \midrule
+      Underlying (asset)
+        & The asset an option is written on, e.g.\ a stock. In our setup, one per prompt.
+        & What is the option about? \\
+      Spot price $S$
+        & The underlying's price today. We price $C/S$, so its value never matters.
+        & What does the stock cost now? \\
+      Call option
+        & A contract giving the right, but not the obligation, to buy the underlying at a fixed price $K$ at a future time $T$.
+        & What is being priced? \\
+      Call price $C$
+        & What the call option costs today. The target $f(x)$ the transformer predicts (as $C/S$, standardised).
+        & How much is the right to buy worth? \\
+      Strike $K$
+        & The fixed price at which the call lets you buy.
+        & At what price can I buy? \\
+      Log-moneyness $m$
+        & $m = \ln(K/S)$: the strike relative to today's price. $m = 0$ means $K = S$.
+        & How far is the strike from today's price? \\
+      In / out of the money (ITM / OTM)
+        & A call is ITM if $K < S$ ($m<0$), i.e.\ it would pay off today, and OTM if $K > S$ ($m>0$).
+        & Would exercising pay off right now? \\
+      Maturity $T$
+        & Time until the option expires, in years.
+        & How long until the option ends? \\
+      Risk-free rate $r$
+        & Interest earned on a riskless investment; fixed at $r = 0.02$.
+        & What would money earn risk-free meanwhile? \\
+      Volatility $\sigma$
+        & How much the underlying's price fluctuates (annualised std of log-returns). The hidden parameter per prompt.
+        & How uncertain is the future price? \\
+      Black--Scholes formula
+        & The standard formula giving $C$ from $(S, K, T, r, \sigma)$. Only $\sigma$ is not directly observable.
+        & What is the fair price of the option? \\
+      Implied volatility
+        & The $\sigma$ that makes the Black--Scholes price equal an observed price.
+        & What volatility is the market price assuming? \\
+      Volatility smile / skew
+        & Implied volatility varying with the strike instead of being constant; equity markets show higher $\sigma$ for low strikes (skew).
+        & Does one $\sigma$ fit all strikes? \\
+      Calibration
+        & Fitting the volatility parameters so model prices match observed prices, then using them to price new options.
+        & Which $\sigma$ explains the prices I see? \\
+      Bid--ask spread
+        & The gap between buying and selling prices in a market; makes observed prices noisy. Motivates our noisy evaluation.
+        & How exact are observed prices? \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
