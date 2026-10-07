@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Posterior Mean Baseline</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+
+<p class="kicker">Lesson 4 · hands-on exercise · about 45 minutes</p>
+<h1>Build the posterior-mean baseline</h1>
+<p class="lede">Lesson 3 showed that the best possible prediction is the average over every volatility consistent with the examples. Now you write it into <code>src/models.py</code>, check it automatically, and find where it can be trusted.</p>
+
+<p><strong>Your win for today:</strong> a working <code>BSPosteriorMeanModel</code> that passes 10/10 checks, plus a one-sentence answer to "where is our Transformer Bayes-optimal, and where isn't it?"</p>
+
+<h2>1. The idea in one formula</h2>
+
+<div class="sn-wrap">
+<span class="sidenote">Owen, <a href="https://artowen.su.domains/mc/"><em>Monte Carlo theory, methods and examples</em></a>, ch. 9 (<a href="https://artowen.su.domains/mc/Ch-var-is.pdf">PDF</a>): section 9.2 self-normalised importance sampling, section 9.3 diagnostics.</span>
+<p>Draw L parameter sets θ₁ … θ_L from the prior once. For a prompt, weight each by how well it prices the examples seen <em>so far</em>, then average its query price:</p>
+</div>
+
+<p class="eq">ŷ<sub>i</sub> = Σ<sub>ℓ</sub> w<sub>ℓ</sub> · price<sub>ℓ</sub>(x<sub>i</sub>), &nbsp;&nbsp; w<sub>ℓ</sub> ∝ exp( −SSE<sub>ℓ</sub>(examples 0 … i−1) / 2τ² )</p>
+
+<p>This is self-normalised importance sampling with the prior as the proposal: the weights are the likelihood. <strong>τ is the assumed noise standard deviation</strong> of the standardised prices:</p>
+<ul>
+  <li><strong>Noisy eval:</strong> the true noise is 0.05, so τ = 0.05 makes this the exact Bayes-optimal predictor (up to Monte Carlo error).</li>
+  <li><strong>Clean evals:</strong> the exact answer needs τ → 0, but then almost every sample gets zero weight. A small τ = 0.01 is an approximation, and section 5 shows where it breaks down.</li>
+</ul>
+
+<p>Before you start, <strong>predict</strong> and write down: on <code>bs_flat</code> at k = 1, will the Transformer (0.0034) be close to the Bayes-optimal error, or far above it?</p>
+
+<h2>2. Set up</h2>
+<pre>git switch -c posterior-baseline
+python learn/exercises/check_posterior.py     # should FAIL: the class doesn't exist yet</pre>
+<p>Run everything from the repo root in the <code>in-context-learning</code> conda env. The checker (<code>learn/exercises/check_posterior.py</code>) tests shapes, leakage, the k = 0 case and the error at k = 1 and 3 against my reference implementation. It takes about a minute.</p>
+
+<h2>3. Write it, step by step</h2>
+
+<p>Add the class to <code>src/models.py</code> just below <code>BSPriorMeanModel</code> (around line 590). Use that class as your template: it already samples the prior and broadcasts prices over it.</p>
+
+<h3>Step 1 — constructor</h3>
+<p>Signature <code>__init__(self, task_name, prior_samples=8192, tau=0.02)</code>. Store <code>self.data_cls = BS_TASKS[task_name]</code>, draw <code>self.params</code> with a fixed-seed generator (copy <code>BSPriorMeanModel</code>), store τ, and set <code>self.name = f"bs_posterior_mean_tau={tau}"</code>. The name must be unique, because you'll register two instances.</p>
+
+<h3>Step 2 — price every option under every prior sample</h3>
+<p>From <code>xs</code> of shape (b, n, 2), compute <code>m, T = bs_features(xs)</code>, add a trailing axis, and get standardised prices of shape <strong>(b, n, L)</strong>. That's the same three calls as in <code>BSPriorMeanModel.__call__</code>.</p>
+
+<h3>Step 3 — squared error of the examples <em>before</em> each position</h3>
+<p>Compute <code>sq = (prices − ys[..., None])²</code>, also (b, n, L). The weight at position i must use rows 0 … i−1 only, so take the cumulative sum along n and <strong>shift it down by one</strong>: prepend a zero row and drop the last row.</p>
+
+<div class="key">
+<p><strong>The trap:</strong> forget the shift and position i sees its own answer y<sub>i</sub>. The error drops to ~0 and looks like a triumph. The checker's leakage test changes y<sub>5</sub> and asserts the prediction at 5 doesn't move.</p>
+</div>
+
+<h3>Step 4 — weights and prediction</h3>
+<p>Use <code>torch.softmax(-sse / (2 * tau**2), dim=-1)</code>. It computes exactly the normalised exp(…) weights without overflow. The prediction is <code>(weights * prices).sum(-1)</code>, of shape (b, n). Then handle <code>inds</code> like the other baselines and return <code>pred[:, inds]</code>.</p>
+
+<h3>Step 5 — check</h3>
+<pre>python learn/exercises/check_posterior.py</pre>
+<p>Fix each FAIL using its hint, and rerun until you get 10/10. Only open the solution after a real attempt; that effort is what makes it stick.</p>
+
+<details class="recall">
+<summary>Reference solution</summary>
+<pre>class BSPosteriorMeanModel:
+    def __init__(self, task_name, prior_samples=8192, tau=0.02):
+        self.data_cls = BS_TASKS[task_name]
+        generator = torch.Generator().manual_seed(0)
+        self.params = self.data_cls.sample_params(prior_samples, generator)
+        self.tau = tau
+        self.name = f"bs_posterior_mean_tau={tau}"
+
+    def __call__(self, xs, ys, inds=None):
+        xs, ys = xs.cpu(), ys.cpu()
+        if inds is None:
+            inds = range(ys.shape[1])
+        inds = list(inds)
+        n = max(inds) + 1  # later positions are never needed
+        m, T = bs_features(xs[:, :n])
+        m, T = m.unsqueeze(-1), T.unsqueeze(-1)
+        vol = self.data_cls.vol(m, self.params)
+        prices = self.data_cls.standardize(bs_call_over_spot(m, T, vol))  # (b, n, L)
+        sq = (prices - ys[:, :n].unsqueeze(-1)).square()
+        # error of examples 0..i-1 for position i: shift the cumsum by one
+        sse = torch.cat([torch.zeros_like(sq[:, :1]), sq.cumsum(dim=1)[:, :-1]], dim=1)
+        weights = torch.softmax(-sse / (2 * self.tau**2), dim=-1)
+        pred = (weights * prices).sum(dim=-1)
+        return pred[:, inds]</pre>
+<p><code>n = max(inds) + 1</code> matters for the shift evals, which call the model once per position with <code>inds=[i]</code>.</p>
+</details>
+
+<h3>Step 6 — register it and recompute</h3>
+<ol>
+  <li><code>src/models.py</code>, <code>get_relevant_baselines</code>: add <code>(BSPosteriorMeanModel, {"task_name": "bs_flat", "tau": 0.01})</code> and the same with <code>"tau": 0.05</code> to the <code>bs_flat</code> list, and likewise for <code>bs_smile</code>. Each baseline instance runs on <em>every</em> eval, so you need one τ for clean data and one matching the noisy eval.</li>
+  <li><code>src/eval.py</code>, <code>baseline_names</code>: add a label, e.g. <code>if name.startswith("bs_posterior_mean_tau="): return f"BS posterior mean (τ={name.split('=')[1]})"</code>.</li>
+  <li><code>src/plot_utils.py</code>: add <code>"BS posterior mean (τ=0.01)"</code> and <code>"BS posterior mean (τ=0.05)"</code> to <code>relevant_model_names["bs_flat"]</code> and <code>["bs_smile"]</code>. They must match the labels from step 2 exactly, or the plot raises a <code>KeyError</code>.</li>
+  <li>Recompute. Metrics are cached per eval and per model, so only the new baseline runs (commands from <code>HANDOFF.md</code> section 3):
+<pre>cd src
+python -c "from eval import get_run_metrics; get_run_metrics('../models/bs_flat/dc2e5022-dd53-436f-89fb-8c0a6b4fa3ff')"
+python -c "from eval import get_run_metrics; get_run_metrics('../models/bs_smile/61af878c-034c-459f-b647-78b71b2bcfdf')"</pre>
+  This is much larger than the checker (six evals × 1,280 prompts, plus per-position calls on the shift evals), so start it and let it run.</li>
+</ol>
+
+<h2>4. Diagnose: effective sample size</h2>
+
+<div class="sn-wrap">
+<span class="sidenote">Owen ch. 9, eq. (9.13): "If the weights are too imbalanced then the result is similar to averaging only n<sub>e</sub> ≪ n observations and might therefore be unreliable."</span>
+<p>Weighted averages can quietly collapse onto a handful of samples. The effective sample size n<sub>e</sub> = 1 / Σ w<sub>ℓ</sub>² (for weights that sum to 1) says how many prior samples the prediction really rests on. Add <code>ess = 1 / weights.square().sum(-1)</code> while you experiment.</p>
+</div>
+
+<h2>5. What you should find</h2>
+
+<p>My prototype (640 prompts; median ESS in brackets). Compare it with your recomputed <code>metrics.json</code>:</p>
+
+<div class="table-scroll">
+<table>
+<tr><th>Eval</th><th>Model</th><th class="num">k=1</th><th class="num">k=3</th><th class="num">k=10</th><th class="num">k=40</th></tr>
+<tr><td rowspan="3">bs_smile clean</td><td>Transformer</td><td class="num">0.0107</td><td class="num">0.0012</td><td class="num">3.9e-5</td><td class="num">1.5e-5</td></tr>
+<tr><td>Posterior τ=0.01</td><td class="num">0.0109 [339]</td><td class="num">0.0012 [24]</td><td class="num">5.2e-5 [2]</td><td class="num">7.3e-5 [1]</td></tr>
+<tr><td>Smile calibration</td><td class="num">0.0211</td><td class="num">0.0031</td><td class="num">3.3e-4</td><td class="num">7.1e-6</td></tr>
+<tr><td rowspan="3">bs_flat clean</td><td>Transformer</td><td class="num">0.0034</td><td class="num">7.2e-5</td><td class="num">1.9e-5</td><td class="num">1.8e-5</td></tr>
+<tr><td>Posterior τ=0.01</td><td class="num">9.2e-4 [214]</td><td class="num">1.1e-6 [126]</td><td class="num">7.6e-8 [70]</td><td class="num">3.7e-8 [34]</td></tr>
+<tr><td>Calibration</td><td class="num">1.1e-4</td><td class="num">1.2e-6</td><td class="num">1.2e-6</td><td class="num">1.2e-6</td></tr>
+<tr><td rowspan="3">bs_flat noisy</td><td>Transformer</td><td class="num">0.0167</td><td class="num">0.0044</td><td class="num">0.0030</td><td class="num">0.0027</td></tr>
+<tr><td>Posterior τ=0.05</td><td class="num">0.0117 [1100]</td><td class="num">0.0037 [623]</td><td class="num">0.0027 [343]</td><td class="num">0.0025 [174]</td></tr>
+<tr><td>Calibration (MLE)</td><td class="num">0.0187</td><td class="num">0.0039</td><td class="num">0.0027</td><td class="num">0.0025</td></tr>
+</table>
+</div>
+
+<div class="key">
+<p><strong>The story for the paper:</strong></p>
+<ul>
+  <li><strong>bs_smile, few examples:</strong> the Transformer matches the Bayes-optimal predictor to two significant figures (0.0107 vs 0.0109; 0.0012 vs 0.0012). This is the headline result.</li>
+  <li><strong>bs_flat, one example:</strong> it does <em>not</em>. One price identifies σ exactly, so the optimum is near zero; the Transformer is about 30× above calibration. Its weakness is precision, not inference.</li>
+  <li><strong>Noisy prices:</strong> it sits above the true Bayes optimum at small k. That's expected: it was trained on clean prices, so it never learned to discount noise.</li>
+  <li><strong>Trust the posterior only where ESS is large.</strong> On clean bs_smile the ESS falls to 1–2 by k = 10, and the "baseline" there is just the nearest prior sample. Report it for k ≤ 3 on clean smiles. For larger k, use calibration with a better optimiser (gap 2).</li>
+</ul>
+</div>
+
+<h2>6. Practice</h2>
+
+<details class="recall">
+<summary>Write the weight formula and say what τ means.</summary>
+<p>w<sub>ℓ</sub> ∝ exp(−SSE<sub>ℓ</sub> / 2τ²) over examples 0 … i−1; τ is the assumed noise standard deviation of the standardised prices.</p>
+</details>
+
+<div class="quiz" data-answer="a">
+  <p class="q">1. Why must the error sum at position i exclude example i?</p>
+  <button data-k="a">The query price would leak into its own prediction</button>
+  <button data-k="b">Including it would make the softmax weights numerically unstable</button>
+  <button data-k="c">Example i has a different volatility than the others</button>
+  <button data-k="d">The cumulative sum would exceed the tensor's memory budget</button>
+  <p class="why">At position i, y<sub>i</sub> is the answer being predicted. If it's in the weights, the model just looks it up. All examples in a prompt share one vol model.</p>
+</div>
+
+<div class="quiz" data-answer="a">
+  <p class="q">2. What does τ represent in the weights exp(−SSE / 2τ²)?</p>
+  <button data-k="a">The assumed standard deviation of price noise</button>
+  <button data-k="b">The temperature controlling the Transformer's attention sharpness</button>
+  <button data-k="c">The volatility prior's width for each parameter</button>
+  <button data-k="d">How many prior samples survive the filtering</button>
+  <p class="why">exp(−SSE / 2τ²) is the Gaussian likelihood of the examples under noise with standard deviation τ. When τ equals the true noise, the weighted average is the exact posterior mean.</p>
+</div>
+
+<div class="quiz" data-answer="a">
+  <p class="q">3. On clean bs_smile data at k = 10 the median ESS is about 2. What follows?</p>
+  <button data-k="a">The estimate is unreliable; trust only small k</button>
+  <button data-k="b">The Transformer must be worse than Bayes here</button>
+  <button data-k="c">Ten examples always pin down the smile exactly</button>
+  <button data-k="d">Tau should be lowered to exactly zero here</button>
+  <p class="why">With about 2 effective samples, the "average" is really one or two prior draws, so its error says little about the true optimum. Lowering τ makes the collapse worse; the fix is more samples or a better proposal.</p>
+</div>
+
+<div class="quiz" data-answer="a">
+  <p class="q">4. On the noisy eval at k = 1, bs_flat's Transformer (0.0167) sits above the posterior with τ = 0.05 (0.0117). Most likely reason?</p>
+  <button data-k="a">It was trained only on noise free prices</button>
+  <button data-k="b">The posterior mean is leaking the query price</button>
+  <button data-k="c">Noisy evaluation uses a different volatility prior entirely</button>
+  <button data-k="d">The Transformer architecture cannot represent averages over parameters</button>
+  <p class="why">The Transformer approximates the posterior for the task it was trained on: clean prices. It treats a noisy example as exact. Training with noise is the experiment that would test this.</p>
+</div>
+
+<p class="score"></p>
+
+<div class="source">
+<strong>Primary source to read next</strong>
+<p>Owen, <a href="https://artowen.su.domains/mc/Ch-var-is.pdf"><em>Monte Carlo theory, methods and examples</em>, ch. 9</a>, section 9.2–9.3 (about 5 pages). Self-normalised importance sampling and the effective sample size are exactly the two tools you used. Skim the derivations; read the paragraphs on when the weights become unreliable.</p>
+</div>
+
+<p class="ask">Stuck on a FAIL, or getting numbers that don't match the table? Paste the checker output in the terminal and I'll debug it with you.</p>
+
+<nav class="course">
+  <a href="0003-reading-our-results.html">← Lesson 3</a>
+  <a href="../reference/project-map.html">Project map</a>
+  <a href="../reference/glossary.html">Glossary</a>
+</nav>
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

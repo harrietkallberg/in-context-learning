@@ -20,3 +20,9 @@
 - Lesson 3 (reading our results) plus `assets/posterior.js`, a k = 1 posterior-vs-one-fit widget with an SVG smile fan and 1,000-stock scoring.
 - Verified by simulation (4,000 stocks): at k = 1 on bs_smile the posterior mean gets 0.0099 and a random exact fit 0.0196 (ratio 1.98; theory 2). The trained models get Transformer 0.0107 and smile calibration 0.0211. So the Transformer ≈ Bayes-optimal at k = 1. This is a strong, paper-worthy point.
 - Harriet asked "what is ndtr?" between lessons: torch's standard normal CDF wasn't obvious. Name library functions explicitly in lessons.
+
+## Session 4 (2026-10-07)
+- "exercise 4" read as Lesson 4: a hands-on build of BSPosteriorMeanModel in src/models.py (she writes it; I didn't touch src/). Checker: `learn/exercises/check_posterior.py`, validated (reference 10/10, leaky version 5/10).
+- Prototype findings (640 prompts): on clean smile at k=1–3 the posterior with τ=0.01 matches the Transformer (0.0109/0.0012 vs 0.0107/0.0012). bs_flat k=1: the Transformer is ~30× above calibration (a precision limit). Noisy: the Transformer sits above the τ=0.05 posterior at small k (trained clean). ESS collapses on clean smile beyond k≈5.
+- Earlier she didn't recognise "§" ("swirly 3"). Avoid § in lessons, or write "section 3".
+- Still no quiz results reported, so no learning records yet.

@@ -44,7 +44,7 @@
 <tr><td class="mono">00178ea</td><td>09-30</td><td><code>modal_train.py</code> (A100 launcher with auto-resume) and <code>experimental_setup.md</code></td><td>Cloud GPUs; document every deviation from the paper</td></tr>
 <tr><td class="mono">31630bf</td><td>09-30</td><td><strong>The BS tasks.</strong> <code>tasks.py</code>: <code>bs_features</code>, <code>bs_call_over_spot</code>, <code>BlackScholes</code>, <code>BlackScholesFlat</code>, <code>BlackScholesSmile</code>. <code>models.py</code>: <code>BSCalibrationModel</code>. Configs <code>bs_flat.yaml</code>/<code>bs_smile.yaml</code> (n_dims = 2). <code>train.py</code>: baseline loss = 1 and atomic checkpoint writes. <code>eval.py</code>: <code>noisy</code> eval. <code>schema.py</code>, <code>plot_utils.py</code>: registration and labels.</td><td>The extension itself</td></tr>
 <tr><td class="mono">e61880c</td><td>09-30</td><td><code>BSPriorMeanModel</code>, the no-context baseline</td><td>Separates in-context learning from memorising the fixed price surface</td></tr>
-<tr><td class="mono">32d227a</td><td>09-30</td><td>Shift evals: <code>otm_to_itm</code>, <code>short_to_long</code>, <code>scale-m=2/3</code></td><td>The counterpart of the paper's §4 distribution-shift tests</td></tr>
+<tr><td class="mono">32d227a</td><td>09-30</td><td>Shift evals: <code>otm_to_itm</code>, <code>short_to_long</code>, <code>scale-m=2/3</code></td><td>The counterpart of the paper's section 4 distribution-shift tests</td></tr>
 <tr><td class="mono">e19a215, 26082d4</td><td>09-30</td><td><code>HANDOFF.md</code>; ignore <code>models_toy/</code></td><td>Next steps after training</td></tr>
 <tr><td class="mono">bb9edc4</td><td>09-30</td><td><code>figures/</code> (all tasks), <code>eval_repr.ipynb</code>, <code>basic_plot(ax=…)</code>, dropped the missing "2-layer NN, GD" tree baseline</td><td>Results and figures</td></tr>
 </table>
@@ -75,7 +75,7 @@
 <tr><td>Decision tree</td><td>50 / 100</td><td class="num">0.222 / 0.044</td><td class="num">0.277 / 0.121</td></tr>
 <tr><td>ReLU net</td><td>50 / 100</td><td class="num">4.46 / 3.13</td><td class="num">4.81 / 2.88</td></tr>
 </table>
-<p>The reproduction matches. Tree and ReLU baselines aren't comparable to the paper because the public code differs from the paper's description (<code>experimental_setup.md</code> §5).</p>
+<p>The reproduction matches. Tree and ReLU baselines aren't comparable to the paper because the public code differs from the paper's description (<code>experimental_setup.md</code> section 5).</p>
 
 <h3>Extension: squared error (standardised) by number of examples k</h3>
 <table>
@@ -104,7 +104,8 @@
 <ol>
   <li><strong>The paper isn't written.</strong> <code>neurips_2026.tex</code> is still the unedited template, and HANDOFF step 5 (write results into <code>experimental_setup.md</code>) isn't done.</li>
   <li><strong>The "optimal" reference isn't exact.</strong> With noise-free prices and k ≥ 3, smile calibration should reach ~0 error, yet it sits at 3e-4 at k = 10. The grid + local search runs out of resolution or gets stuck in local minima. Fix: a proper optimiser (Gauss–Newton / L-BFGS from several starts) before calling it the optimum.</li>
-  <li><strong>No Bayes-optimal baseline for small k and noise.</strong> The posterior mean (the average over the prior weighted by fit) is the true optimum where least squares is underdetermined or noisy. A quick simulation at k = 1 (<a href="../lessons/0003-reading-our-results.html">Lesson 3</a>) gives a posterior mean of 0.0099 vs the Transformer's 0.0107, so the model is close to Bayes-optimal there. Making that a real baseline in <code>models.py</code>, for every k and the noisy eval, would turn this into a headline result.</li>
+  <li><strong>No Bayes-optimal baseline for small k and noise.</strong> The posterior mean (the average over the prior weighted by fit) is the true optimum where least squares is underdetermined or noisy. A quick simulation at k = 1 (<a href="../lessons/0003-reading-our-results.html">Lesson 3</a>
+  <a href="../lessons/0004-build-the-posterior-mean-baseline.html">Lesson 4</a>) gives a posterior mean of 0.0099 vs the Transformer's 0.0107, so the model is close to Bayes-optimal there. Making that a real baseline in <code>models.py</code>, for every k and the noisy eval, would turn this into a headline result.</li>
   <li><strong>One seed per task.</strong> Fine for the reproduction (the paper did the same for these figures). For the new BS claims, a reviewer will ask for 3 seeds.</li>
   <li><strong>The scale-m failure isn't analysed.</strong> Is it the input range (x₀ up to ±9, never seen), or the price regime? A test that separates the two: same m range but rescaled x.</li>
   <li><strong>Relative metric.</strong> The shifts move the no-context floor (0.073 to 0.22), so report the Transformer error ÷ prior-mean error per eval.</li>
@@ -116,6 +117,7 @@
   <a href="../lessons/0001-one-prompt-one-hidden-function.html">Lesson 1</a>
   <a href="../lessons/0002-black-scholes-in-four-lines.html">Lesson 2</a>
   <a href="../lessons/0003-reading-our-results.html">Lesson 3</a>
+  <a href="../lessons/0004-build-the-posterior-mean-baseline.html">Lesson 4</a>
   <a href="glossary.html">Glossary</a>
 </nav>
 </main>

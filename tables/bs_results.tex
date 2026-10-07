@@ -1,0 +1,14 @@
+\begin{tabular}{llcccc}
+\toprule
+Task & Method & $k=0$ & $k=1$ & $k=3$ & $k=40$ \\
+\midrule
+Flat & Transformer & $0.146$ & $3.4\cdot10^{-3}$ & $7.2\cdot10^{-5}$ & $1.8\cdot10^{-5}$ \\
+ & Calibration & $0.144$ & $1.1\cdot10^{-4}$ & $1.2\cdot10^{-6}$ & $1.2\cdot10^{-6}$ \\
+ & Prior mean (no context) & $0.157$ & $0.156$ & $0.149$ & $0.149$ \\
+\midrule
+Smile & Transformer & $0.061$ & $\mathbf{1.1\cdot10^{-2}}$ & $\mathbf{1.2\cdot10^{-3}}$ & $1.5\cdot10^{-5}$ \\
+ & Calibration (smile) & $0.060$ & $2.1\cdot10^{-2}$ & $3.1\cdot10^{-3}$ & $7.1\cdot10^{-6}$ \\
+ & Calibration (flat) & $0.059$ & $4.5\cdot10^{-2}$ & $2.4\cdot10^{-2}$ & $1.5\cdot10^{-2}$ \\
+ & Prior mean (no context) & $0.059$ & $0.057$ & $0.058$ & $0.061$ \\
+\bottomrule
+\end{tabular}

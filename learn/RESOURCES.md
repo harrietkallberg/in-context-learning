@@ -36,6 +36,10 @@ All entries were checked on 2026-10-06 (URL fetched or metadata confirmed via Cr
 - [Paper: von Oswald et al. (2022), "Transformers learn in-context by gradient descent", arXiv:2212.07677](https://arxiv.org/abs/2212.07677)
   The mechanistic view (GD in the forward pass). Use for: related work only (mechanisms are out of scope).
 
+### Monte Carlo methods
+- [Book chapter: Owen, *Monte Carlo theory, methods and examples*, ch. 9 "Importance sampling"](https://artowen.su.domains/mc/Ch-var-is.pdf) (book page: https://artowen.su.domains/mc/)
+  Free, by a Stanford statistician. §9.2 self-normalised importance sampling; §9.3 effective sample size, eq. (9.13). Use for: the posterior-mean baseline and its reliability diagnostic.
+
 ## Wisdom (Communities)
 - [Quantitative Finance Stack Exchange](https://quant.stackexchange.com/)
   Use for: sanity-checking the finance side (smile parameterisation, moneyness ranges, whether a reviewer from finance would accept the setup).
