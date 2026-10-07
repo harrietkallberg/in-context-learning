@@ -60,6 +60,7 @@ def get_task_sampler(
         "quadratic_regression": QuadraticRegression,
         "relu_2nn_regression": Relu2nnRegression,
         "decision_tree": DecisionTree,
+        **BS_TASKS,
     }
     if task_name in task_names_to_classes:
         task_cls = task_names_to_classes[task_name]
@@ -342,3 +343,113 @@ class DecisionTree(Task):
     @staticmethod
     def get_training_metric():
         return mean_squared_error
+
+
+# Black-Scholes pricing: each prompt is one underlying with hidden volatility.
+# The Gaussian inputs x are mapped to option features:
+#   log-moneyness m = ln(K/S) = BS_M_SCALE * x[0]
+#   maturity      T = BS_T_MIN + (BS_T_MAX - BS_T_MIN) * Phi(x[1])   (years)
+# and the target is the call price divided by the spot, standardized so the
+# trivial (constant mean) estimator has error ~1.
+BS_RATE = 0.02
+BS_M_SCALE = 0.2
+BS_T_MIN, BS_T_MAX = 0.1, 2.0
+BS_MIN_VOL = 0.05
+
+
+def bs_features(xs_b):
+    m = BS_M_SCALE * xs_b[..., 0]
+    T = BS_T_MIN + (BS_T_MAX - BS_T_MIN) * torch.special.ndtr(xs_b[..., 1])
+    return m, T
+
+
+def bs_call_over_spot(m, T, sigma, r=BS_RATE):
+    """Black-Scholes call price C/S with K/S = exp(m)."""
+    vol_sqrt_t = sigma * T.sqrt()
+    d1 = (-m + (r + 0.5 * sigma**2) * T) / vol_sqrt_t
+    d2 = d1 - vol_sqrt_t
+    return torch.special.ndtr(d1) - torch.exp(m - r * T) * torch.special.ndtr(d2)
+
+
+class BlackScholes(Task):
+    """Base class; subclasses define the volatility model and its prior.
+
+    Parameters are a tensor whose last dimension indexes `param_ranges`, so the
+    same `vol` works for one parameter set per prompt and for calibration grids.
+    """
+
+    param_ranges = ()  # (low, high) of the uniform prior for each parameter
+    _moments = {}  # class name -> (mean, std) of C/S under the prior
+
+    def __init__(self, n_dims, batch_size, pool_dict=None, seeds=None, noise_std=0.0):
+        """noise_std: std of Gaussian noise added to the standardized prices."""
+        super(BlackScholes, self).__init__(n_dims, batch_size, pool_dict, seeds)
+        self.noise_std = noise_std
+        if pool_dict is not None or seeds is not None:
+            raise NotImplementedError("Black-Scholes tasks sample fresh parameters only")
+        assert n_dims == 2, "Black-Scholes tasks use (moneyness, maturity) inputs"
+        self.params = self.sample_params(batch_size).unsqueeze(1)  # (b, 1, P)
+
+    @classmethod
+    def sample_params(cls, batch_size, generator=None):
+        low, high = torch.tensor(cls.param_ranges).T
+        u = torch.rand(batch_size, len(cls.param_ranges), generator=generator)
+        return low + (high - low) * u
+
+    @staticmethod
+    def vol(m, params):
+        raise NotImplementedError
+
+    @classmethod
+    def moments(cls):
+        # Monte Carlo over the prior, with a fixed seed so every run agrees
+        if cls.__name__ not in cls._moments:
+            generator = torch.Generator().manual_seed(0)
+            params = cls.sample_params(4096, generator).unsqueeze(1)
+            m, T = bs_features(torch.randn(4096, 64, 2, generator=generator))
+            prices = bs_call_over_spot(m, T, cls.vol(m, params))
+            cls._moments[cls.__name__] = (prices.mean().item(), prices.std().item())
+        return cls._moments[cls.__name__]
+
+    @classmethod
+    def standardize(cls, prices):
+        mean, std = cls.moments()
+        return (prices - mean) / std
+
+    def evaluate(self, xs_b):
+        m, T = bs_features(xs_b)
+        params = self.params.to(xs_b.device)
+        ys_b = self.standardize(bs_call_over_spot(m, T, self.vol(m, params)))
+        return ys_b + self.noise_std * torch.randn_like(ys_b)
+
+    @staticmethod
+    def get_metric():
+        return squared_error
+
+    @staticmethod
+    def get_training_metric():
+        return mean_squared_error
+
+
+class BlackScholesFlat(BlackScholes):
+    """Constant volatility per prompt: sigma ~ U[0.1, 0.5]."""
+
+    param_ranges = ((0.1, 0.5),)
+
+    @staticmethod
+    def vol(m, params):
+        return params[..., 0] + torch.zeros_like(m)
+
+
+class BlackScholesSmile(BlackScholes):
+    """Quadratic smile per prompt: sigma(m) = sigma0 + skew*m + curvature*m^2."""
+
+    param_ranges = ((0.15, 0.4), (-0.4, 0.0), (0.0, 1.0))
+
+    @staticmethod
+    def vol(m, params):
+        sigma0, skew, curvature = params[..., 0], params[..., 1], params[..., 2]
+        return (sigma0 + skew * m + curvature * m**2).clamp(min=BS_MIN_VOL)
+
+
+BS_TASKS = {"bs_flat": BlackScholesFlat, "bs_smile": BlackScholesSmile}

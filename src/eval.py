@@ -11,7 +11,7 @@ import yaml
 
 import models
 from samplers import get_data_sampler, sample_transformation
-from tasks import get_task_sampler
+from tasks import BS_TASKS, get_task_sampler
 
 
 def get_model_from_run(run_path, step=-1, only_conf=False):
@@ -25,11 +25,11 @@ def get_model_from_run(run_path, step=-1, only_conf=False):
 
     if step == -1:
         state_path = os.path.join(run_path, "state.pt")
-        state = torch.load(state_path)
+        state = torch.load(state_path, map_location="cpu")
         model.load_state_dict(state["model_state_dict"])
     else:
         model_path = os.path.join(run_path, f"model_{step}.pt")
-        state_dict = torch.load(model_path)
+        state_dict = torch.load(model_path, map_location="cpu")
         model.load_state_dict(state_dict)
 
     return model, conf
@@ -131,6 +131,25 @@ def gen_overlapping_train_test(data_sampler, n_points, b_size):
     return xs_train_pre, xs_test_post
 
 
+# Black-Scholes shifts: examples on one side of a feature, query on the other.
+# x0 > 0 is m = ln(K/S) > 0 (out-of-the-money call); x1 < 0 is T below ~1.05y.
+def split_feature(data_sampler, n_points, b_size, dim, train_sign):
+    xs = data_sampler.sample_xs(n_points, b_size)
+    xs_train_pre, xs_test_post = xs.clone(), xs.clone()
+    xs_train_pre[..., dim] = train_sign * xs[..., dim].abs()
+    xs_test_post[..., dim] = -train_sign * xs[..., dim].abs()
+
+    return xs_train_pre, xs_test_post
+
+
+def gen_otm_to_itm(data_sampler, n_points, b_size):
+    return split_feature(data_sampler, n_points, b_size, dim=0, train_sign=1)
+
+
+def gen_short_to_long(data_sampler, n_points, b_size):
+    return split_feature(data_sampler, n_points, b_size, dim=1, train_sign=-1)
+
+
 def aggregate_metrics(metrics, bootstrap_trials=1000):
     """
     Takes as input a tensor of shape (num_eval, n_points) and returns a dict with
@@ -212,6 +231,17 @@ def build_evals(conf):
     if task_name != "linear_regression":
         if task_name in ["relu_2nn_regression"]:
             evaluation_kwargs["linear_regression"] = {"task_name": "linear_regression"}
+        if task_name in BS_TASKS:
+            # "standard" uses clean prices for every model, so this pair gives
+            # both the clean and noisy evaluation whatever the training noise was
+            evaluation_kwargs["noisy"] = {"task_sampler_kwargs": {"noise_std": 0.05}}
+            # distribution shift (paper §4) without retraining
+            evaluation_kwargs["otm_to_itm"] = {"prompting_strategy": "otm_to_itm"}
+            evaluation_kwargs["short_to_long"] = {"prompting_strategy": "short_to_long"}
+            for scale in [2, 3]:  # wider moneyness range, maturity unchanged
+                evaluation_kwargs[f"scale-m={scale}"] = {
+                    "data_sampler_kwargs": {"scale": torch.diag(torch.tensor([scale, 1.0]))}
+                }
         for name, kwargs in evaluation_kwargs.items():
             # allow kwargs to override base_kwargs values
             evaluation_kwargs[name] = base_kwargs.copy()
@@ -295,7 +325,8 @@ def get_run_metrics(
         all_models = []
     else:
         model, conf = get_model_from_run(run_path, step)
-        model = model.cuda().eval()
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = model.to(device).eval()
         all_models = [model]
         if not skip_baselines:
             all_models += models.get_relevant_baselines(conf.training.task)
@@ -309,7 +340,7 @@ def get_run_metrics(
         save_path = os.path.join(run_path, f"metrics_{step}.json")
 
     recompute = False
-    if save_path is not None and os.path.exists(save_path):
+    if not skip_model_load and save_path is not None and os.path.exists(save_path):
         checkpoint_created = os.path.getmtime(run_path)
         cache_created = os.path.getmtime(save_path)
         if checkpoint_created > cache_created:
@@ -348,6 +379,11 @@ def baseline_names(name):
         return "Greedy Tree Learning"
     if "xgboost" in name:
         return "XGBoost"
+    if name == "bs_prior_mean":
+        return "BS prior mean (no context)"
+    if name.startswith("bs_calibration_vol="):
+        vol_model = name.split("=")[1][len("bs_"):]
+        return f"BS calibration ({vol_model})"
     return name
 
 

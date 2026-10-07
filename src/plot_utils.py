@@ -5,6 +5,7 @@ import seaborn as sns
 
 from eval import get_run_metrics, baseline_names, get_model_from_run
 from models import build_model
+from tasks import BS_TASKS
 
 sns.set_theme("notebook", "darkgrid")
 palette = sns.color_palette("colorblind")
@@ -27,7 +28,6 @@ relevant_model_names = {
     "decision_tree": [
         "Transformer",
         "3-Nearest Neighbors",
-        "2-layer NN, GD",
         "Greedy Tree Learning",
         "XGBoost",
     ],
@@ -37,11 +37,31 @@ relevant_model_names = {
         "3-Nearest Neighbors",
         "2-layer NN, GD",
     ],
+    "bs_flat": [
+        "Transformer",
+        "Least Squares",
+        "3-Nearest Neighbors",
+        "BS prior mean (no context)",
+        "BS calibration (flat)",
+    ],
+    "bs_smile": [
+        "Transformer",
+        "Least Squares",
+        "3-Nearest Neighbors",
+        "BS prior mean (no context)",
+        "BS calibration (flat)",
+        "BS calibration (smile)",
+    ],
 }
 
 
-def basic_plot(metrics, models=None, trivial=1.0):
-    fig, ax = plt.subplots(1, 1)
+def basic_plot(metrics, models=None, trivial=1.0, ax=None):
+    # pass ax to draw into an existing figure (e.g. side-by-side panels)
+    new_fig = ax is None
+    if new_fig:
+        fig, ax = plt.subplots(1, 1)
+    else:
+        fig = ax.figure
 
     if models is not None:
         metrics = {k: metrics[k] for k in models}
@@ -60,7 +80,8 @@ def basic_plot(metrics, models=None, trivial=1.0):
     ax.set_ylim(-0.1, 1.25)
 
     legend = ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-    fig.set_size_inches(4, 3)
+    if new_fig:
+        fig.set_size_inches(4, 3)
     for line in legend.get_lines():
         line.set_linewidth(3)
 
@@ -92,14 +113,14 @@ def collect_results(run_dir, df, valid_row=None, rename_eval=None, rename_model=
                 n_dims = conf.model.n_dims
 
                 xlim = 2 * n_dims + 1
-                if r.task in ["relu_2nn_regression", "decision_tree"]:
+                if r.task in ["relu_2nn_regression", "decision_tree", *BS_TASKS]:
                     xlim = 200
 
                 normalization = n_dims
                 if r.task == "sparse_linear_regression":
                     normalization = int(r.kwargs.split("=")[-1])
-                if r.task == "decision_tree":
-                    normalization = 1
+                if r.task in ["decision_tree", *BS_TASKS]:
+                    normalization = 1  # targets already standardized
 
                 for k, v in m.items():
                     v = v[:xlim]

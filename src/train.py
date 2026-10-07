@@ -8,13 +8,15 @@ import torch
 import yaml
 
 from eval import get_run_metrics
-from tasks import get_task_sampler
+from tasks import BS_TASKS, get_task_sampler
 from samplers import get_data_sampler
 from curriculum import Curriculum
 from schema import schema
 from models import build_model
 
 import wandb
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 torch.backends.cudnn.benchmark = True
 
@@ -42,7 +44,7 @@ def train(model, args):
     starting_step = 0
     state_path = os.path.join(args.out_dir, "state.pt")
     if os.path.exists(state_path):
-        state = torch.load(state_path)
+        state = torch.load(state_path, map_location=device)
         model.load_state_dict(state["model_state_dict"])
         optimizer.load_state_dict(state["optimizer_state_dict"])
         starting_step = state["train_step"]
@@ -86,19 +88,22 @@ def train(model, args):
 
         loss_func = task.get_training_metric()
 
-        loss, output = train_step(model, xs.cuda(), ys.cuda(), optimizer, loss_func)
+        loss, output = train_step(model, xs.to(device), ys.to(device), optimizer, loss_func)
 
         point_wise_tags = list(range(curriculum.n_points))
         point_wise_loss_func = task.get_metric()
-        point_wise_loss = point_wise_loss_func(output, ys.cuda()).mean(dim=0)
+        point_wise_loss = point_wise_loss_func(output, ys.to(device)).mean(dim=0)
 
-        baseline_loss = (
-            sum(
-                max(curriculum.n_dims_truncated - ii, 0)
-                for ii in range(curriculum.n_points)
+        if args.training.task in BS_TASKS:
+            baseline_loss = 1  # targets are standardized
+        else:
+            baseline_loss = (
+                sum(
+                    max(curriculum.n_dims_truncated - ii, 0)
+                    for ii in range(curriculum.n_points)
+                )
+                / curriculum.n_points
             )
-            / curriculum.n_points
-        )
 
         if i % args.wandb.log_every_steps == 0 and not args.test_run:
             wandb.log(
@@ -123,7 +128,9 @@ def train(model, args):
                 "optimizer_state_dict": optimizer.state_dict(),
                 "train_step": i,
             }
-            torch.save(training_state, state_path)
+            # write then rename, so a copy taken mid-save never sees a partial file
+            torch.save(training_state, state_path + ".tmp")
+            os.replace(state_path + ".tmp", state_path)
 
         if (
             args.training.keep_every_steps > 0
@@ -152,7 +159,7 @@ def main(args):
         )
 
     model = build_model(args.model)
-    model.cuda()
+    model.to(device)
     model.train()
 
     train(model, args)

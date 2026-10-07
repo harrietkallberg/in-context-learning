@@ -1,5 +1,5 @@
 wandb:
     project: in-context-training
-    entity: your-entity
+    entity: harriet-kallberg02-kth-royal-institute-of-technology
     notes:
     log_every_steps: 100
