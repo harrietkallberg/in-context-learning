@@ -1,0 +1,32 @@
+Consider a least squares problem with training data $\{(x_i, y_i)\}_{i=1}^N$ where $y(x)=w^Tx$, with squared error loss as objective function
+\begin{equation}
+L(w)=\tfrac12\sum_{i=1}^N (w^Tx_i-y_i)^2.
+\end{equation}
+
+The change in the weight vector
+
+\begin{equation}
+    \Delta w = -\eta \nabla L(w)=-\eta \sum_{i=1}^N (w^Tx_i-y_i)\,x_i.
+\end{equation}
+Setting the initial vector to $w=0$
+\begin{equation}
+    w_1=w_0 + \Delta w_0= 0-\eta \nabla L(w_0)= \eta\sum_{i=1}^N y_i x_i.
+\end{equation}
+
+
+
+
+The prediction for the query based on the approximation of $w$ after a single step of gradient descent is
+\begin{equation}
+    \hat{y_q} = w_1^Tx_q = \eta \sum_{i=1}^{N} y_i x_i^Tx_q.
+    \label{eq:gd_pred}
+\end{equation}
+
+In linear attention, each token embedding $e_j=(x_j, y_j)$ is mapped to three vectors: a query $q_j$, a key $k_j$, and a value $v_j$ via learned linear maps $W_q, W_k, W_v$. Then each token $j$ outputs a sum of values weighted by key-query dot products:
+\vspace{-2em}
+
+\begin{equation}
+    \text{out}_j=\sum_{i=1}^N v_i\,k_i^T q_j= \eta \sum_{i=1}^N y_i\,x_i^T x_j, 
+\end{equation} where we have chosen the weights of the linear maps to pick coordinates as $ q_j=W_q e_j =x_j,\ k_i=W_k e_i=x_i,\ v_i=W_v e_i = \eta y_i$. Comparing to \eqref{eq:gd_pred} it is apparent that one layer of linear attention applied to the query token $e_q=(x_q, 0)$ reproduces exactly one step of gradient descent.
+
+Note that standard transformers use softmax rather than linear attention, which replaces the dot product by a normalized exponential, giving a positive weighted average.
