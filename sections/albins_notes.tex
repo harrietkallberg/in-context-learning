@@ -1,0 +1,29 @@
+\section{Albins notes
+}
+
+
+Optimization procedures (GD, ridge, lasso) vs root finding problem for implied vol-calibration.
+
+They show that even more complex function classes: sparse linear functions, two-layer neural networks, and decision trees can be learned in context
+
+ICL - learning witout parameter updates, resembles for example fitting a regression internally
+
+They investigate if the ICL model can generalize under shift: (a) a shift between the prompts encountered during training and inference (e.g.,
+training on prompts without any noise in the in-context example outputs but testing with noisy outputs)
+(b) x form different distributions (isotropic Gaussian shifted) during ICL and inference.
+
+"Transformers can encode algorithms with similar performance in a single forward pass."
+
+IDEA 1. Show the result from paper ie transformers can learn optimization problems. 2. Show that transformers can learn root finding problems. 3. Apply root finding to European options equation.\textbf{No, root finding would not contain ICL.}
+
+NEW IDEA: Overall narrative arc for the writeup: \begin{itemize}
+    \item generic nonlinear ICL
+    \item named, motivated nonlinear family (BS) with a clean baseline
+    \item stress test under noise (real comparison to classical methods)
+    \item increase latent dimensionality and hit a genuinely harder classical problem (joint curve fitting, not formula inversion)
+    \item honest real-world case study with caveats. \end{itemize}
+Each stage should reuse the previous stage's evaluation machinery (error vs. k, capacity scans, parameter-recovery/decodability checks, OOD shifts) so the results are comparable across stages, the same way the original paper reused Figure 2/3-style plots across linear, sparse, tree, and NN sections.
+
+They found that the transformer performs much better than greedy and boosted approaches on the decision tree functions, for which we do not have good understanding of efficient algorithms. Reverse engineering could find such an algorithm encoded by the transformer.
+
+-----
