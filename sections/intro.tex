@@ -1,0 +1,32 @@
+\section{Introduction}
+In-Context Learning (ICL) refers to the ability of a machine learning model to solve a task conditioned on examples of input-output pairs given in the prompt at inference time, without any updates to the model weights. So the "learning" (of weights $w$ for linear $f(x)=w^Tx$ for example) happens in the activations during the forward pass, while the weights of the model only encode the optimization algorithm.
+
+An intuitive example motivating how tranformers can encode optimization procedures, such as gradient descent is presented by \cite{vonOswald2023Transformers}, restated here in a simpler and less rigourus way. 
+
+Consider a least squares problem with training data $\{(x_i, y_i)\}_{i=1}^N$ where $y(x)=w^Tx$, with objective function
+\begin{equation}
+    L(w)=\frac{1}{2N}\sum_{i=1}^N ||w^Tx_i-y_i||^2.
+\end{equation}
+
+Consider the weight update in one step of gradient descent with step size $\eta$
+\begin{equation}
+    \Delta w
+= -\eta \nabla_w L(w)
+= -\eta \sum_{i=1}^{N} (w^T x_i - y_i)x_i.
+\end{equation}
+
+Also assume initial weights $w_0=0$, then
+
+\begin{equation}
+    w_1 = w_0 +\Delta w_0 
+= \eta \sum_{i=1}^{N} y_i x_i.
+\end{equation}
+
+The prediction for the query based on the approximation of $w$ after a single step of gradient descent is
+\begin{equation}
+    \hat{y_q} = w_1^Tx_q = \eta \sum_{i=1}^{N} y_i x_i^Tx_q.
+\end{equation}
+
+
+
+

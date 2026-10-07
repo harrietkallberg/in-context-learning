@@ -1,0 +1,32 @@
+\section{In-Context-Learning of Black-Scholes}
+(c) your variation and its result
+
+As an extension of the work presented in \cite{garg2022what}, we intent to test the learning-to-learn and predictive abilities of transformer on a real world financial application: the European Option Market. 
+
+\subsection{Introduction to Black-Scholes}
+
+We define a new family of functions, namely the set of Black-Scholes functions defined as
+\begin{equation}
+    ?,
+\end{equation}
+where, \textbf{[C, S, T, sigma?]} which is non-linear but low dimensional.
+
+The unknown volatility $\sigma$ should be learned by the transformer given in-context examples, to infer a option call [?] price from. We consider two variations of the problem: flat volatility $\sigma_0$ and smile volatility $\sigma=\sigma_0 + bm + cm^2$, where $m=?$, where the latter takes into account [?] and is considered a more accurate model.
+
+Again, we use the same training setup as described in \cite{garg2022what}, where this time we define the prompt as
+\begin{equation}
+    P_{BS}=?.
+\end{equation}
+
+We compare the prediction error \eqref{error} as before to baseline calibration method defined as
+\begin{equation}
+    ?.
+\end{equation}
+
+We evaluate the transformers ability to in-context-learn $\sigma$ to infer option price under clean, noisy (to simulate real market conditions), \textbf{[and itm-to-otm conditions, any more interesting that are comparable to previous results?]}.
+
+
+
+\textbf{Implications for real world use?}
+
+

@@ -1,0 +1,30 @@
+\section{Reproduction of ICL of linear functions}
+(b) your reproduction, with a short log of what the paper left unspecified and what you had to guess; 
+
+In this section we reproduce some results obtained by \cite{garg2022what} on ICL learning of linear functions.
+
+
+We train our own transformer from scratch on NVIDIA A100 via Modal, following the exact setup used in the paper. We then evaluate the model using the same framework as described in the paper.
+
+Our trained transformer outperforms 3-NN and averaging on both clean and noisy labels. Its error closely tracks that of minimum-norm least square on clean labels, see figure \ref{fig:linear}. For noisy labels, the transformer reproduces the double descent curve, see figure \ref{fig:noisy}. For minimum norm least squares, the double descent curve appears when plotting test error against the number of noisy training samples n, for a fixed number of features p. For n < p, the system is underdetermined and there are infinitely many ways to fit the training data exactly, but the minimum-norm solution is chosen. It keeps the weights small, effectively spreading the noise over many directions, so predictions on new data stay reasonable. As n increases toward p, this freedom disappears. At n = p there is a unique way to fit the data, so the model is forced to pass through every noisy label.  It needs large weights, which turn the noise in the training labels into large errors on new data, so test error peaks. For n > p, the problem is overdetermined and least squares improves as n grows, because label noise averages out. 
+
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[h]{0.39\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/standard_repr_cropped.png}
+    \caption{Linear functions}
+    \label{fig:linear}
+  \end{subfigure}
+  \begin{subfigure}[h]{0.6\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/noisyLR_repr_cropped.png}
+    \caption{Noisy linear regression}
+    \label{fig:noisy}
+  \end{subfigure}
+  \caption{In-context learning performance of the trained transformer for ICL of linear functions.}
+  \label{fig:repr}
+\end{figure}
+
+
+

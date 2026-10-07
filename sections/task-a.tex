@@ -1,0 +1,63 @@
+\section{A review of Garg et al. [2022]}
+
+(a) Recap of the main algorithm, its mathematical formulation, and the main thesis of the paper, which you may be questioned on
+
+In this section we review the theory and methods used by \cite{garg2022what}.
+
+\paragraph{Hypothesis.} The hypothesis of the paper is that transformers trained on specific families of functions, including linear functions, sparse linear functions, two-layer neural networks, and decision trees, can encode non-trivial learning algorithms within a single forward pass. Therefore, for in-context examples drawn from a well-defined function class, transformers can predict function values outside of those seen. ICL is hard to study in LLMs, so the paper invents a controlled setting to study the phenomenon in transformers only. Concretely for linear functions, given a set of pairs $\{(x_i, f(x_i))\}_{i=1}^N$ from $f=w^Tx$, a transformer encodes an algorithm which lets it infer the weights $w$ to predict $f(x_{N+1})$, resembling least-square. 
+The paper empirically claims that the  transformer achieves
+error comparable to the optimal least-squares estimator, suggesting that it
+encodes an effective learning algorithm. Since training data comes from linear functions with different weights, learning least squares regression would be plausible way for the model to score good results in training rather than fitting its weight to predict a single linear function. 
+ 
+Below we describe the mathematical formulation, training and evaluation procedure used by \cite{garg2022what} test their hypothesis: 
+
+
+Let $D_\mathcal{X}$ be a distribution over inputs and
+$D_\mathcal{F}$ a distribution over functions in $\mathcal{F}$. A prompt is a set of pairs $(x_i, f(x_i))$ and a query: 
+
+\begin{equation}
+    P =(x_1, f(x_1), \dots, x_k, f(x_k), x_{\text{query}}),
+    \label{prompt}
+\end{equation}
+
+with $x_i, x_{\text{query}} \sim D_\mathcal{X}$ i.i.d.\ and $f \sim D_\mathcal{F}$.
+A model $M$ \emph{in-context learns} $\mathcal{F}$ up to $\epsilon$ if for some loss function $\ell$
+\begin{equation}
+  \mathbb{E}_P\!\left[\ell\big(M(P), f(x_{\text{query}})\big)\right] \le \epsilon.
+\end{equation}
+
+\paragraph{Training.} A decoder-only GPT-2 style transformer $M_\theta$
+(12 layers, 8 heads, 256-dimensional embeddings, 9.5M parameters) is trained
+from scratch without any text or pre-trained language model. For
+each training step, a function $f$ from the function class and inputs $x_i$ are sampled, and the model
+is trained to predict $f(x_{i+1})$ from every prompt prefix
+$P^i = (x_1, f(x_1), \dots, x_i, f(x_i), x_{i+1})$, with the objective to minimize
+\begin{equation}
+  \mathbb{E}_P\!\left[\frac{1}{k+1}\sum_{i=0}^{k}
+  \ell\big(M_\theta(P^i), f(x_{i+1})\big)\right].
+\end{equation}
+
+For linear functions which we study further in this report because of their simplicity and the particularly interesting ICL behavior, $x_i \sim \mathcal{N}(0, I_d)$, $f(x)=w^\top x$ with
+$w \sim \mathcal{N}(0, I_d)$, and $d=20$. Training uses Adam, 500k steps with
+batch size 64 and a curriculum that gradually increases the input dimension
+and prompt length, which significantly increases the learning rate.
+
+\paragraph{Evaluation.} The transformer trained for ICL is evaluated with respect to the normalized (by dimension $d$) squared error
+
+\begin{equation}
+    \frac{1}{d}(M(P)-f(x_{\text{query}}))^2
+    \label{error}
+\end{equation}
+on prompts P according to \eqref{prompt}, where $k$ is the number of in-context-examples. It's performance in terms of error \eqref{error} is compared to classical alternatives as a function of number of in-context-examples.
+
+For linear functions, the transformer is compared to the optimal estimator minimum-norm least squares, which is optimal for this noiseless problem, an averaging estimator $\hat{w}=\frac1k\sum_i x_i y_i$, and 3-nearest neighbours.
+
+
+\paragraph{Results.}
+For linear functions, the trained transformer's error tracks that of least squares for every number of in-context examples, and is far better than averaging or nearest neighbours. Performance degrades gracefully under skewed input covariance, a low-dimensional input subspace, and context. It is less robust to rescaling the inputs. The transformer also handles noisy labels and even reproduces the double descent curve of least squares.
+  
+  
+Transformers also learn (i) sparse linear function, matching Lasso
+ (ii) two-layer ReLU networks, matching a network trained by Adam on the context (iii) depth-4 decision trees, outperforming greedy tree learning and XGBoost.
+
+Larger models give lower error and are more robust to distribution shift, and curriculum learning speeds up training drastically, especially in higher dimensions.
