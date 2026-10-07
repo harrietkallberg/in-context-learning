@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Course Glossary</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+<p class="kicker">Reference</p>
+<h1>Glossary</h1>
+<p class="lede">The terms every lesson uses, with the name each one has in the code.</p>
+
+<h2>In-context learning (the paper)</h2>
+<table>
+<tr><th>Term</th><th>Meaning</th><th>In code</th></tr>
+<tr><td>Prompt</td><td>A sequence (x₁, f(x₁), …, x_k, f(x_k), x_query) built from one function f</td><td>one row along axis b of <code>xs</code>, <code>ys</code></td></tr>
+<tr><td>Function class</td><td>The family f is drawn from, e.g. all linear functions</td><td>a <code>Task</code> subclass</td></tr>
+<tr><td>Task (instance)</td><td>The particular f for each prompt in a batch</td><td><code>task_sampler()</code></td></tr>
+<tr><td>k</td><td>Number of in-context examples before the query</td><td>x-axis of every plot</td></tr>
+<tr><td>n_points</td><td>Prompt length during training (k + 1)</td><td><code>curriculum.n_points</code></td></tr>
+<tr><td>n_dims (d)</td><td>Dimension of each input x</td><td><code>conf.model.n_dims</code></td></tr>
+<tr><td>Curriculum</td><td>Starting training with short, low-dimensional prompts and growing them</td><td><code>curriculum.py</code></td></tr>
+<tr><td>Baseline</td><td>A classical algorithm given the same examples, for comparison</td><td><code>get_relevant_baselines</code></td></tr>
+<tr><td>Trivial / zero estimator</td><td>Always predicting the mean target; the "learned nothing" error</td><td>dashed line at 1 (BS)</td></tr>
+<tr><td>Distribution shift</td><td>Evaluating on prompts drawn differently from training</td><td><code>build_evals</code></td></tr>
+</table>
+
+<h2>Options (finance)</h2>
+<table>
+<tr><th>Term</th><th>Meaning</th><th>In code</th></tr>
+<tr><td>Call option</td><td>The right to buy the stock at strike K at time T</td><td>the only payoff we price</td></tr>
+<tr><td>S</td><td>Spot price of the stock today</td><td>divided out: we price C/S</td></tr>
+<tr><td>K</td><td>Strike price</td><td>via m</td></tr>
+<tr><td>Log-moneyness m</td><td>ln(K/S); 0 = at the money</td><td><code>m = 0.2 * x0</code></td></tr>
+<tr><td>ITM / OTM</td><td>In / out of the money; for a call, m &lt; 0 / m &gt; 0</td><td><code>otm_to_itm</code> eval</td></tr>
+<tr><td>Maturity T</td><td>Years until expiry</td><td><code>T = 0.1 + 1.9·Φ(x1)</code></td></tr>
+<tr><td>r</td><td>Risk-free interest rate</td><td><code>BS_RATE = 0.02</code></td></tr>
+<tr><td>Volatility σ</td><td>Annualised std of the stock's log-returns; the only unknown in the formula</td><td><code>vol(m, params)</code></td></tr>
+<tr><td>Implied volatility</td><td>The σ that makes the Black–Scholes price equal an observed price</td><td>what calibration recovers</td></tr>
+<tr><td>Smile / skew</td><td>Implied vol varying with strike instead of being flat</td><td><code>BlackScholesSmile</code></td></tr>
+<tr><td>Calibration</td><td>Fitting the vol parameters so model prices match observed ones</td><td><code>BSCalibrationModel</code></td></tr>
+</table>
+
+<h2>Our evaluation</h2>
+<table>
+<tr><th>Term</th><th>Meaning</th><th>In code</th></tr>
+<tr><td>Standardised price</td><td>(C/S − prior mean) / prior std, so the trivial error ≈ 1</td><td><code>standardize</code></td></tr>
+<tr><td>Prior</td><td>The distribution vol parameters are drawn from in training</td><td><code>param_ranges</code></td></tr>
+<tr><td>BS prior mean</td><td>Price averaged over the prior; ignores the examples. The no-context floor.</td><td><code>BSPriorMeanModel</code></td></tr>
+<tr><td>Evidence of ICL</td><td>Transformer error below the prior mean <em>of the same eval</em></td><td>—</td></tr>
+<tr><td>Posterior mean</td><td>The prior average weighted by how well each vol fits the examples; Bayes-optimal under squared error. <em>Not yet implemented.</em></td><td>—</td></tr>
+</table>
+
+<nav class="course">
+  <a href="../lessons/0001-one-prompt-one-hidden-function.html">Lesson 1</a>
+  <a href="project-map.html">Project map</a>
+</nav>
+</main>
+</body>
+</html>

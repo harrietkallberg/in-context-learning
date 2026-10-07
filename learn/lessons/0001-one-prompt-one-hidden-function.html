@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Hidden Function</title>
+<link rel="stylesheet" href="../assets/course.css">
+</head>
+<body>
+<main>
+
+<p class="kicker">Lesson 1 · about 10 minutes</p>
+<h1>One prompt, one hidden function</h1>
+<p class="lede">The whole paper, and our Black–Scholes extension, rest on one idea. Once you can say exactly what is hidden in a prompt and what isn't, everything else (baselines, results, gaps) follows.</p>
+
+<p><strong>Your win for today:</strong> describe, for the paper's task and for ours, what changes between prompts, what stays fixed, and which curve proves the model learned in context.</p>
+
+<h2>1. The paper's experiment</h2>
+
+<div class="sn-wrap">
+<span class="sidenote">Garg et al. 2022, <a href="https://arxiv.org/abs/2208.01066">arXiv:2208.01066</a>, §2–3. Abstract: the model learns "unseen linear functions from in-context examples with performance comparable to the optimal least squares estimator."</span>
+<p>Pick a function <em>f</em> at random from a class, for example all linear functions f(x) = w·x with w ~ N(0, I₂₀). Draw some inputs x₁ … x_k and write the prompt</p>
+</div>
+
+<p class="eq">x₁, f(x₁), x₂, f(x₂), …, x_k, f(x_k), x_query → ?</p>
+
+<p>The Transformer must predict f(x_query). Its weights are never updated during the prompt, so it has to work out <em>f</em> from the examples it sees: that's <strong>in-context learning</strong>. Training repeats this with a fresh <em>f</em> every prompt (about 32 million of them), so the only thing worth learning is <em>how to infer f from examples</em>.</p>
+
+<p>Success means matching the best classical algorithm given the same examples. For linear functions that's least squares, which needs about d = 20 examples to pin down 20 unknowns. Our rerun reproduces this: at k = 40 our model's error is 0.014 and the authors' released model's is 0.012.</p>
+
+<h2>2. The same slot, in code</h2>
+
+<p>Every task in the repo fills the same two-line contract (<code>src/train.py:80-87</code>):</p>
+<pre>xs   = data_sampler.sample_xs(n_points, b)   # shape (b, n, d)
+task = task_sampler()                         # draws one hidden f per prompt
+ys   = task.evaluate(xs)                      # shape (b, n)</pre>
+<p>Axis <strong>b</strong> = which prompt, so which hidden <em>f</em>. Axis <strong>n</strong> = position in the prompt. Axis <strong>d</strong> = the features of one input. Adding a new function class means writing a new <code>Task</code> subclass, and that's exactly what we did.</p>
+
+<h2>3. Our swap: f becomes "a stock with hidden volatility"</h2>
+
+<div class="sn-wrap">
+<span class="sidenote">Black &amp; Scholes 1973, <a href="https://doi.org/10.1086/260062">doi:10.1086/260062</a>. Lesson 2 derives the C/S form.</span>
+<p>In <code>bs_flat</code>, the hidden <em>f</em> for one prompt is "price a call on a stock whose volatility is σ", with σ ~ U[0.1, 0.5] drawn once per prompt. Each example is an option: x = (x₀, x₁) becomes log-moneyness m and maturity T, and y is its Black–Scholes price. The query is another option on the <em>same</em> stock.</p>
+</div>
+
+<table>
+<tr><th></th><th>Paper: linear</th><th><code>bs_flat</code></th><th><code>bs_smile</code></th></tr>
+<tr><td><strong>Changes per prompt</strong></td><td>w (20 numbers)</td><td>σ (1 number)</td><td>σ₀, skew, curvature (3)</td></tr>
+<tr><td><strong>Fixed for every prompt</strong></td><td>only "it's linear"</td><td colspan="2">the BS formula, r = 2%, the x → (m, T) map</td></tr>
+<tr><td>Examples to pin it down</td><td>20</td><td>1</td><td>3</td></tr>
+<tr><td>Best classical algorithm</td><td>least squares</td><td colspan="2">calibration: fit the vol, then price</td></tr>
+</table>
+
+<h2>4. The catch: what's fixed can be memorised</h2>
+
+<p>In linear regression nothing about <em>f</em> carries over between prompts, so with zero examples the best guess is 0 and the error is large (≈ 20). In our task the whole price surface carries over: a deep in-the-money call is worth a lot whatever σ is. A model can store that in its weights and look clever without reading the examples at all.</p>
+
+<p>That's why we added the <strong>BS prior mean</strong> baseline (<code>models.py</code>, <code>BSPriorMeanModel</code>). It prices each option at its average over all σ in the prior and ignores the examples. Our real numbers on <code>bs_flat</code>:</p>
+
+<table>
+<tr><th>Examples k</th><th class="num">0</th><th class="num">1</th><th class="num">3</th><th class="num">40</th></tr>
+<tr><td>Transformer</td><td class="num">0.146</td><td class="num">0.0034</td><td class="num">0.00007</td><td class="num">0.00002</td></tr>
+<tr><td>BS prior mean (no context)</td><td class="num">0.157</td><td class="num">0.156</td><td class="num">0.149</td><td class="num">0.149</td></tr>
+<tr><td>Trivial (predict the average)</td><td class="num">1</td><td class="num">1</td><td class="num">1</td><td class="num">1</td></tr>
+</table>
+
+<div class="key">
+<p>At k = 0 the Transformer already sits at 0.146, far below 1. That's memorisation of the fixed surface, not in-context learning. The evidence is the drop <strong>below the prior-mean line</strong> once examples arrive: 45× lower after one example. Always compare against the prior mean of the same eval, never against 1.</p>
+</div>
+
+<h2>5. Practice</h2>
+
+<details class="recall">
+<summary>Write the shape of <code>xs</code> for a bs_flat training batch and name each axis.</summary>
+<p>(64, n_points, 2): 64 prompts (one σ each) × up to 41 positions × 2 features (x₀ → moneyness, x₁ → maturity).</p>
+</details>
+
+<details class="recall">
+<summary>In one sentence: what must the model infer in bs_smile that it doesn't in bs_flat?</summary>
+<p>How the volatility varies with strike (the skew and curvature of the smile), not just its level. That's 3 hidden numbers instead of 1, so it needs at least 3 examples.</p>
+</details>
+
+<div class="quiz" data-answer="a">
+  <p class="q">1. In the paper's linear-regression task, what changes from one prompt to the next?</p>
+  <button data-k="a">The weight vector w defining f</button>
+  <button data-k="b">The Transformer's own learned parameter values</button>
+  <button data-k="c">The number of input dimensions d</button>
+  <button data-k="d">The Gaussian distribution of inputs x</button>
+  <p class="why">A fresh w is drawn for every prompt. The weights only change between training steps, never within a prompt, and d and the input distribution are fixed.</p>
+</div>
+
+<div class="quiz" data-answer="a">
+  <p class="q">2. In bs_flat, which quantity is hidden and drawn fresh for every prompt?</p>
+  <button data-k="a">The volatility σ of the underlying</button>
+  <button data-k="b">The risk-free interest rate r used</button>
+  <button data-k="c">The spot price S of underlying</button>
+  <button data-k="d">The maturity T of each option</button>
+  <p class="why">σ is sampled once per prompt (<code>sample_params</code>). r is a constant (2%), S is divided out (we price C/S), and T is visible: it's computed from x₁ for each example.</p>
+</div>
+
+<div class="quiz" data-answer="a">
+  <p class="q">3. With zero examples the Transformer already has error 0.146 on bs_flat, far below 1. Why?</p>
+  <button data-k="a">It learned the fixed price surface in weights</button>
+  <button data-k="b">It already infers sigma from the query input</button>
+  <button data-k="c">Standardisation shrinks all errors by a constant factor</button>
+  <button data-k="d">The query option is always at the money</button>
+  <p class="why">The formula and the x → (m, T) map are the same in every prompt, so the model memorises the average price for each (m, T). That matches the prior-mean baseline (0.157). The query x says nothing about σ.</p>
+</div>
+
+<div class="quiz" data-answer="a">
+  <p class="q">4. Which comparison is the evidence that our model calibrates volatility in context?</p>
+  <button data-k="a">Its error falls below the BS prior mean</button>
+  <button data-k="b">Its error falls below the least squares line</button>
+  <button data-k="c">Its error falls below the trivial value one</button>
+  <button data-k="d">Its error matches the paper's linear regression model</button>
+  <p class="why">Only the prior-mean line removes what can be memorised. Beating 1 or least squares is easy without reading the examples at all.</p>
+</div>
+
+<p class="score"></p>
+
+<div class="source">
+<strong>Primary source to read next</strong>
+<p>Garg et al. (2022), <a href="https://arxiv.org/abs/2208.01066">arXiv:2208.01066</a>, §2 "Problem setup" and §3 (Fig. 2). About 4 pages. Watch for where they define "in-context learning a function class"; our extension uses the same definition with a different class.</p>
+</div>
+
+<p class="ask">Anything unclear? Ask me in the terminal. I'm your teacher here and can show you the exact code or numbers behind any line above.</p>
+
+<nav class="course">
+  <a href="../reference/project-map.html">Project map</a>
+  <a href="../reference/glossary.html">Glossary</a>
+  <span>Next: Lesson 2, Black–Scholes in four lines (why S drops out and σ is the only unknown)</span>
+</nav>
+</main>
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
