@@ -37,7 +37,7 @@
 <tr><td>Trivial (dashed, 1)</td><td>the average price</td><td>nothing</td></tr>
 <tr><td>Least squares, 3-NN</td><td>generic, from the paper; doesn't know the formula</td><td>nothing; they're weak here</td></tr>
 <tr><td><strong>BS prior mean</strong></td><td>the formula, but ignores the examples</td><td><strong>in-context learning</strong> (lesson 1)</td></tr>
-<tr><td>BS calibration</td><td>the formula and the true vol model; fits the examples</td><td>see §3: not what you'd think</td></tr>
+<tr><td>BS calibration</td><td>the formula and the true vol model; fits the examples</td><td>nothing by crossing it. It's a yardstick: near-optimal with many examples, but beaten by the ideal predictor with few (§3)</td></tr>
 </table>
 
 <p>Least squares spikes to 41 at k = 2 because it fits a <em>linear</em> function of x. With 2 features and 2 examples it solves exactly and extrapolates wildly. Use it to show generic learners fail, never as evidence.</p>
