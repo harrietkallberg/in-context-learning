@@ -7,9 +7,6 @@
       \toprule
       Term & Meaning & Answers the question \\
       \midrule
-      Underlying (asset)
-        & The asset an option is written on, e.g.\ a stock. In our setup, one per prompt.
-        & What is the option about? \\
       Spot price $S$
         & The underlying's price today. We price $C/S$, so its value never matters.
         & What does the stock cost now? \\
@@ -25,9 +22,6 @@
       Log-moneyness $m$
         & $m = \ln(K/S)$: the strike relative to today's price. $m = 0$ means $K = S$.
         & How far is the strike from today's price? \\
-      In / out of the money (ITM / OTM)
-        & A call is ITM if $K < S$ ($m<0$), i.e.\ it would pay off today, and OTM if $K > S$ ($m>0$).
-        & Would exercising pay off right now? \\
       Maturity $T$
         & Time until the option expires, in years.
         & How long until the option ends? \\
