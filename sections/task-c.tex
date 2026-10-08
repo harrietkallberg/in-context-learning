@@ -36,6 +36,7 @@
   which reflects that implied volatility in real markets varies with strike (skew $b$,
   curvature $c$). The transformer must then infer three parameters instead of one.
 \subsection{Training and evaluation setup}
+\label{sec:bs-setup}
 
   \paragraph{Task.}
   Let $\theta$ denote the hidden volatility parameters, $\sigma$ for flat and
@@ -145,7 +146,7 @@ and for $k \geq 1$ its error is typically about half that of the prior mean, whi
 varies between $0.10$ and $0.15$. Smile calibration has error at most $2.3\cdot10^{-6}$
 at $k=40$ under both scalings, while flat calibration is slightly worse than the prior
 mean at scale 2 ($0.071$ vs.\ $0.060$) and far worse at scale 3 ($0.28$). On flat
-volatility (Figure~\ref{fig:bs-flat-scaling}) the failure is clearer: at scale 3 the
+volatility the failure is clearer: at scale 3 the
 transformer's error crosses the prior mean's back and forth and is no better overall, so
 the examples give no benefit, while calibration reaches $6.3\cdot10^{-7}$.
 
