@@ -56,6 +56,7 @@
   prices in the prompt, with $\varepsilon_i = 0$ unless stated otherwise, which recovers
   \eqref{prompt}.
 
+\vspace{-1em}
   \paragraph{Training.}
   We use the training setup of \cite{garg2022what}, minimising \eqref{objective}, except
   that the curriculum only increases the number of examples, since $d = 2$ is fixed.
@@ -74,7 +75,8 @@
   without using the context. We therefore report the prior-mean price
   $\hat y_{\text{query}} = \mathbb{E}_{f \sim D_\mathcal{F}}[f(x_{\text{query}})]$ as a
   no-context baseline. Only error below it is evidence of in-context learning.
-
+    
+    \vspace{-2em}
   \paragraph{Noisy prices and wider moneyness.}
   As for noisy linear regression in \cite{garg2022what}, we also evaluate on noisy prices,
   with $\varepsilon_i \sim \mathcal{N}(0, \tau^2)$, $\tau = 0.05$, added to the standardised
@@ -88,7 +90,7 @@
   practically never been trained.
 
 \subsection{Results}
-
+\vspace{-1em}
 \paragraph{Flat and smile volatility.}
 Without examples ($k=0$) the transformer's error matches that of the prior mean, and
 after a single example it falls far below it (Table~\ref{tab:bs-results}), so the
