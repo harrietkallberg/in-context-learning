@@ -91,17 +91,15 @@
 
 \paragraph{Flat and smile volatility.}
 Without examples ($k=0$) the transformer's error matches that of the prior mean, and
-after a single example it falls far below it (Table~\ref{tab:bs-results}). Since the
-prior mean is the best prediction that ignores the context, this drop shows that the
-transformer uses the example rather than relying on its weights alone. With flat
-volatility the transformer stays above calibration for all $k$; both level off after a
-few examples, the transformer about an order of magnitude higher. With smile volatility
-the transformer goes far below misspecified flat calibration, which levels off early.
-Against smile calibration, the transformer has lower error up to $k \approx 18$, the two
-are comparable for $k \approx 19$--$25$, and calibration is lower from about $k \approx 27$
-(Figure~\ref{fig:bs-smile-noise}, left). With enough examples the grid search pins down
-the parameters accurately, while the transformer's error plateaus. Its error also
-fluctuates less between neighbouring $k$ than calibration's.
+after a single example it falls far below it (Table~\ref{tab:bs-results}), so the
+transformer uses the example. With flat volatility it stays above calibration for all
+$k$; both level off after a few examples, the transformer about an order of magnitude
+higher. With smile volatility it goes far below misspecified flat calibration, which
+levels off early. Against smile calibration, the transformer has lower error up to
+$k \approx 18$, the two are comparable for $k \approx 19$--$25$, and calibration is lower
+from about $k \approx 27$, as the transformer's error plateaus
+(Figure~\ref{fig:bs-smile-noise}, left). Its error also fluctuates less between
+neighbouring $k$ than calibration's.
 
 \begin{table}[h]
 \caption{Error against number of in-context examples $k$ for flat and smile volatility,
@@ -115,10 +113,9 @@ comparing the transformer with the prior mean and with flat and smile calibratio
 \paragraph{Noisy prices.}
 At $k=40$ the transformer reaches $2.7\cdot10^{-3}$ on flat and $3.4\cdot10^{-3}$ on smile
 volatility, against $2.5\cdot10^{-3}$ and $2.6\cdot10^{-3}$ for calibration
-(Figure~\ref{fig:bs-smile-noise}, right). The noise cannot be predicted, so the expected
-error cannot go below the floor $\tau^2 = 2.5\cdot10^{-3}$. Calibration reaches it within
-sampling noise and the transformer comes close. With few examples the transformer is
-ahead: at $k=1$ on smile volatility its error is $2.1\cdot10^{-2}$ against
+(Figure~\ref{fig:bs-smile-noise}, right). Calibration reaches the noise floor
+$\tau^2 = 2.5\cdot10^{-3}$ within sampling noise and the transformer comes close. With
+few examples the transformer is ahead: at $k=1$ on smile volatility its error is $2.1\cdot10^{-2}$ against
 $3.4\cdot10^{-2}$ for calibration.
 
 \begin{figure}[h]
@@ -130,15 +127,8 @@ error 1. Dotted line: noise floor $\tau^2$.}
 \end{figure}
 
 \paragraph{Wider moneyness range.}
-At test time, without retraining, we multiply moneyness $m$ by 2 and 3, which evaluates
-the models on more extreme strikes. Unlike the input scaling of \cite{garg2022what},
-which multiplies all input dimensions, only $m$ is scaled, and it reaches the price
-through a nonlinear map. With smile volatility,
-$\sigma(m) = \sigma_0 + \text{skew}\cdot m + \text{curvature}\cdot m^2$ is also evaluated
-at larger $|m|$, so the volatilities leave the training range as well; with flat
-volatility $\sigma$ is unchanged. Prices are standardised with the training statistics,
-so errors are comparable across methods but are no longer fractions of the variance.
-
+With smile volatility, $\sigma_\theta(m)$ is evaluated at larger $|m|$, so the
+volatilities also leave the training range; with flat volatility $\sigma$ is unchanged.
 On smile volatility (Figure~\ref{fig:bs-smile-scaling}), at scale 2 the transformer
 improves until about $k \approx 10$ ($1.8\cdot10^{-3}$) and then fluctuates around
 $10^{-3}$, far below the prior mean ($0.060$). At scale 3 it improves much more slowly,
@@ -146,9 +136,9 @@ and for $k \geq 1$ its error is typically about half that of the prior mean, whi
 varies between $0.10$ and $0.15$. Smile calibration has error at most $2.3\cdot10^{-6}$
 at $k=40$ under both scalings, while flat calibration is slightly worse than the prior
 mean at scale 2 ($0.071$ vs.\ $0.060$) and far worse at scale 3 ($0.28$). On flat
-volatility the failure is clearer: at scale 3 the
-transformer's error crosses the prior mean's back and forth and is no better overall, so
-the examples give no benefit, while calibration reaches $6.3\cdot10^{-7}$.
+volatility the failure is clearer: at scale 3 the transformer's error crosses the prior
+mean's back and forth and is no better overall, while calibration reaches
+$6.3\cdot10^{-7}$.
 
 \begin{figure}[h]
 \centering
