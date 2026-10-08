@@ -2,10 +2,7 @@
     \citet{garg2022what} show that transformers can learn several function classes in
     context. We review this work and reproduce some of its results for linear functions,
     where our own transformer matches the error of least squares. We then apply
-    in-context learning to Black--Scholes pricing of European options. Each prompt
-    contains priced options on one underlying (asset) whose volatility is unknown and either flat
-    or follows a smile. After a single example, the transformer improves far on the
-    no-context prior mean. With few examples it outperforms correctly specified
+    in-context learning to Black--Scholes pricing of European options. With few examples our transformer outperforms correctly specified
     calibration on smile volatility, and on noisy prices it approaches the noise floor.
     However, it degrades for strikes far outside the training range, suggesting that it
     has learned an approximation that holds within the training distribution rather than
