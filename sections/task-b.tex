@@ -21,6 +21,7 @@ minimum-norm least squares (Figure~\ref{fig:linear}, Table~\ref{tab:linear-repro
 including the drop to zero error at $k \geq 20$, where the 20-dimensional problem is
 fully determined and least squares has a unique solution.
 
+\vspace{-1em}
 \paragraph{Noisy labels.}
 With noisy labels, the transformer still outperforms 3-NN and averaging, and reproduces
 the double descent curve (Figure~\ref{fig:noisy}). For minimum-norm least squares, this
@@ -35,20 +36,20 @@ averages out as $n$ grows. Interestingly, the transformer handles the peak at $n
 better than minimum-norm least squares. This possibly suggests some kind of
 regularisation of the in-context learned weights that keeps them from taking extreme
 values.
-
+\vspace{-1em}
 \paragraph{Comparison with the released checkpoints.}
 Our transformer performs like the checkpoints released by \cite{garg2022what}, up to
 random variation; see Appendix~\ref{app:reproduction}.
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}[t]{0.38\textwidth}
+\begin{subfigure}[t]{0.3\textwidth}
   \centering
   \includegraphics[width=\linewidth]{figures/standard_repr_cropped.png}
   \caption{Clean labels}
   \label{fig:linear}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.58\textwidth}
+\end{subfigure}\hfil
+\begin{subfigure}[t]{0.47\textwidth}
   \centering
   \includegraphics[width=\linewidth]{figures/noisyLR_repr_cropped.png}
   \caption{Noisy labels}

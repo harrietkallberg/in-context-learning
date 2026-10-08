@@ -1,5 +1,6 @@
  \section{A review of \citet{garg2022what}}
 
+\vspace{-1em}
   \paragraph{Hypothesis.} The paper hypothesises that transformers trained on a function
   class, such as linear functions, sparse linear functions, two-layer neural networks or
   decision trees, encode a non-trivial learning algorithm within a single forward pass.
@@ -10,6 +11,7 @@
   work. Instead, the model must infer $w$ from the pairs $\{(x_i, f(x_i))\}_{i=1}^k$ to
   predict $f(x_{\text{query}})$.
 
+\vspace{-0em}
   \paragraph{Formulation.} Let $D_\mathcal{X}$ be a distribution over inputs and
   $D_\mathcal{F}$ a distribution over functions in $\mathcal{F}$. A prompt is a sequence
   of input-output pairs followed by a query,
@@ -40,6 +42,7 @@
   size 64. A curriculum that gradually increases the input dimension and prompt length
   speeds up training significantly.
 
+\vspace{-1em}
   \paragraph{Evaluation.} The model is evaluated by the squared error normalised by $d$,
   \begin{equation}
     \frac{1}{d}\big(M(P)-f(x_{\text{query}})\big)^2,
