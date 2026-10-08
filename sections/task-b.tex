@@ -7,9 +7,9 @@
 We train our own transformer from scratch on an NVIDIA A100 via Modal, with the model,
 optimiser, curriculum, number of training steps and evaluation (1280 prompts, 90\%
 bootstrap confidence intervals) of \cite{garg2022what}. The paper does not state how many
-training runs its results are based on, and the authors released one checkpoint per task;
-we train a single run. Neither their code nor ours fixes a random seed, so our error bars
-reflect variation over evaluation prompts only. The only other differences are software
+training runs its results are based on, and the authors released one checkpoint per task.
+We train a single run. Neither their code nor ours fixes a random seed, so our error bars
+reflect variation over evaluation prompts only. Other differences are mainly regarding software
 (Python 3.10 vs.\ 3.8) and hardware (A100 vs.\ RTX 3090).
 
 \vspace{-0.5em}
