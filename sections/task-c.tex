@@ -91,24 +91,18 @@
 
 \paragraph{Flat and smile volatility.}
 Without examples ($k=0$) the transformer's error matches that of the prior mean, and
-after a single example it falls far below it (Table~\ref{tab:bs-results}), so the
+after a single example it falls far below it ($3.4\cdot10^{-3}$ vs.\ $0.156$ on flat and
+$1.1\cdot10^{-2}$ vs.\ $0.057$ on smile volatility; Appendix~\ref{app:bs-results}), so the
 transformer uses the example. With flat volatility it stays above calibration for all
 $k$; both level off after a few examples, the transformer about an order of magnitude
-higher. With smile volatility it goes far below misspecified flat calibration, which
-levels off early. Against smile calibration, the transformer has lower error up to
-$k \approx 18$, the two are comparable for $k \approx 19$--$25$, and calibration is lower
-from about $k \approx 27$, as the transformer's error plateaus
+higher ($1.8\cdot10^{-5}$ vs.\ $1.2\cdot10^{-6}$ at $k=40$). With smile volatility it goes
+far below misspecified flat calibration, which levels off early ($1.5\cdot10^{-2}$ at
+$k=40$). Against smile calibration, the transformer has lower error up to $k \approx 18$
+($1.2\cdot10^{-3}$ vs.\ $3.1\cdot10^{-3}$ at $k=3$), the two are comparable for
+$k \approx 19$--$25$, and calibration is lower from about $k \approx 27$
+($7.1\cdot10^{-6}$ vs.\ $1.5\cdot10^{-5}$ at $k=40$), as the transformer's error plateaus
 (Figure~\ref{fig:bs-smile}, first panel). Its error also fluctuates less between
 neighbouring $k$ than calibration's.
-
-\begin{table}[h]
-\caption{Error against number of in-context examples $k$ for flat and smile volatility,
-comparing the transformer with the prior mean and with flat and smile calibration.}
-\label{tab:bs-results}
-\centering
-\small
-\input{tables/bs_results.tex}
-\end{table}
 
 \paragraph{Noisy prices.}
 At $k=40$ the transformer reaches $2.7\cdot10^{-3}$ on flat and $3.4\cdot10^{-3}$ on smile

@@ -20,3 +20,15 @@
 \section{Standardisation of Prices}
 \label{app:stand_price}
 \input{sections/stand_price}
+
+\section{Black--Scholes Results}
+\label{app:bs-results}
+\begin{table}[H]
+\caption{Error against number of in-context examples $k$ for flat and smile volatility,
+comparing the transformer with the prior mean and with flat and smile calibration. Bold:
+the transformer has lower error than correctly specified calibration.}
+\label{tab:bs-results}
+\centering
+\small
+\input{tables/bs_results.tex}
+\end{table}
