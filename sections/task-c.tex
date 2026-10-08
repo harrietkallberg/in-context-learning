@@ -72,22 +72,18 @@ $x^{(2)}$ & maturity $T = 0.1 + 1.9\,\Phi(x^{(2)})$
 
 The target $f_\theta(x)$ is the price $C/S$ from equation \eqref{bs}, evaluated at
 $m(x)$, $T(x)$ and $\sigma = \sigma_\theta(m(x))$, and standardised by its mean and
-standard deviation under the prior, using fixed constants computed once by Monte Carlo
-($\mu = 0.145$, $s = 0.102$ for flat and $\mu = 0.141$, $s = 0.106$ for smile volatility):
+standard deviation under the prior.\footnote{We standardise for two reasons. First,
+it gives an interpretable error: predicting the mean gives error $\approx 1$, so errors
+read as the fraction of price variance left unexplained. This plays the role of the
+normalisation by $d$ in \eqref{error}, which we therefore do not apply. Second, raw
+prices are small ($C/S \approx 0.14 \pm 0.10$) compared with the standard normal
+inputs, and standardising puts inputs and targets on the same scale.} 
+This was done using fixed constants computed once by Monte Carlo
+($\mu = 0.145$, $s = 0.102$ for flat and $\mu = 0.141$, $s = 0.106$ for smile volatility)
 \begin{equation}
 y = \frac{C/S - \mu}{s}.
 \end{equation}
-We standardise for two reasons:
-
-\textbf{Interpretable error.} Predicting the mean gives error $\approx 1$, so errors
-read as the fraction of price variance left unexplained. This plays the role of the
-normalisation by $d$ in \eqref{error}, which we therefore do not apply.
-
-\textbf{Scale.} Raw prices are small ($C/S \approx 0.14 \pm 0.10$) compared with the
-standard normal inputs; standardising puts inputs and targets on the same scale.
-
-The transformation is fixed and invertible, $C/S = s\,y + \mu$, and all baselines predict
-on the same scale, so it does not change the task.
+and since the transformation is fixed and invertible, $C/S = s\,y + \mu$ without scaling, it does not change the task.
 
 We compare the squared error of the transformer's prediction, without the normalisation
 by $d$, to a baseline calibration method, which fits the volatility parameters to the
@@ -165,7 +161,7 @@ $|m| > 1.2$, where the model has practically never been trained.
 
   \begin{figure}[h]
   \centering
-  \includegraphics[width=0.75\linewidth]{figures/bs_smile/standard_repr.png}
+  \includegraphics[width=0.9\linewidth]{figures/bs_smile/standard_repr.png}
   \caption{\textbf{[YOUR caption]}}
   \label{fig:bs-smile}
   \end{figure}
@@ -177,6 +173,12 @@ $|m| > 1.2$, where the model has practically never been trained.
   calibration ($2.1\cdot10^{-2}$ vs.\ $3.4\cdot10^{-2}$).
   \textbf{[Why do noisy errors keep falling with $k$ but never below $\tau^2$? What does it
   mean that a model trained on clean prices gets this close?]}
+   \begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{figures/bs_smile/clean_vs_noisy.png}
+    \caption{\textbf{[YOUR caption]}}
+    \label{fig:bs-smile}
+  \end{figure}
 
   \paragraph{Scaled moneyness.}
   Scaling by 2, the transformer's error at $k=40$ is $4.6\cdot10^{-3}$ (flat) and
