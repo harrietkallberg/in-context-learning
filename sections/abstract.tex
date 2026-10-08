@@ -1,5 +1,16 @@
 \begin{abstract}
-  It has previously been demonstrated that transformers can learn multiple families of functions in context. This report first reviews the central ideas and results of \cite{garg2022what}. We then reproduce some of the paper's results by training our own transformer, to show that it can encode procedures such as least-squares. Lastly, we investigate ICL in transformers applied to the Black-Scholes model for pricing European options, and find that \textbf{[results]}
+    \citet{garg2022what} show that transformers can learn several function classes in
+    context. We review this work and reproduce some of its results for linear functions,
+    where our own transformer matches the error of least squares. We then apply
+    in-context learning to Black--Scholes pricing of European options. Each prompt
+    contains priced options on one underlying (asset) whose volatility is unknown and either flat
+    or follows a smile. After a single example, the transformer improves far on the
+    no-context prior mean. With few examples it outperforms correctly specified
+    calibration on smile volatility, and on noisy prices it approaches the noise floor.
+    However, it degrades for strikes far outside the training range, suggesting that it
+    has learned an approximation that holds within the training distribution rather than
+    the pricing formula itself.
+  \end{abstract}
   
   
   %The abstract paragraph should be indented \nicefrac{1}{2}~inch (3~picas) on both the left- and right-hand margins. Use 10~point type, with a vertical spacing (leading) of 11~points. The word \textbf{Abstract} must be centered, bold, and in point size 12. Two line spaces precede the abstract. The abstract must be limited to one paragraph.

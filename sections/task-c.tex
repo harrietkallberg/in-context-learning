@@ -10,19 +10,19 @@
   with \emph{spot price} $S$ at a fixed \emph{strike} price $K$ at a fixed \emph{maturity}
   $T$ years from now. Its price $C$ today depends strongly on the stock's \emph{volatility}
   $\sigma$ (worked example in Appendix~\ref{app:call_price}). $S$, $K$ and $T$ are
-  observable, but $\sigma$ is not; in practice it is inferred from the prices of other
-  options on the same stock. This is an in-context learning problem: given (option, price)
-  pairs on one stock, predict the price of another option on that stock.
+  observable, but $\sigma$ is not. In practice it is inferred from the prices of other
+  options on the same stock. This is an in-context learning problem:  given the strikes, maturities and prices of a few
+  options on one stock, predict the price of another option on that stock.
 
   The Black--Scholes model makes this relationship precise. We define the family of
   Black--Scholes functions as
   \begin{equation}
-    \frac{C}{S} = \Phi(d_1) - e^{m - rT}\,\Phi(d_2), \qquad
+    \frac{C}{S}(m, T) = \Phi(d_1) - e^{m - rT}\,\Phi(d_2), \qquad
     d_1 = \frac{-m + \left(r + \tfrac{1}{2}\sigma^2\right)T}{\sigma\sqrt{T}}, \qquad
     d_2 = d_1 - \sigma\sqrt{T},
     \label{bs}
   \end{equation}
-  where $m = \ln(K/S)$ is the log-moneyness, $r = 0.02$ the known risk-free rate and $\Phi$
+  where $m = \ln(K/S)$ is the log-moneyness, $r = 0.02$ the known \emph{risk-free rate} and $\Phi$
   the standard normal CDF. The function is non-linear but low dimensional, with two inputs
   $(m, T)$.
 
@@ -30,106 +30,81 @@
   variants: (i) \emph{flat volatility}, $\sigma \sim U[0.1, 0.5]$ per prompt, and
   (ii) \emph{smile volatility},
   \begin{equation}
-    \sigma(m) = \max\{\sigma_0 + b\,m + c\,m^2,\ 0.05\}, \quad
+    \sigma(m) = \max\{\sigma_0 + b\,m + c\,m^2,\ 0.05\}, \qquad
     \sigma_0 \sim U[0.15, 0.4],\ b \sim U[-0.4, 0],\ c \sim U[0, 1],
   \end{equation}
   which reflects that implied volatility in real markets varies with strike (skew $b$,
   curvature $c$). The transformer must then infer three parameters instead of one.
-
 \subsection{Training and evaluation setup}
 
-We use the same training setup as described in \cite{garg2022what}, except that the
-curriculum only increases the number of examples, since $d = 2$ is fixed. The prompt is
-\begin{equation}
-P_{BS} = \big(x_1, f_\theta(x_1), \dots, x_k, f_\theta(x_k), x_{\text{query}}\big),
-\qquad x_i, x_{\text{query}} \sim \mathcal{N}(0, I_2),
-\end{equation}
-where the hidden volatility parameters $\theta$, $\sigma$ for flat and $(\sigma_0, b, c)$
-for smile volatility, are drawn once per prompt. As in \cite{garg2022what}, the inputs are
-Gaussian; they are mapped to option features $m(x)$ and $T(x)$ by
-Table~\ref{tab:bs-inputs}.
+  \paragraph{Task.}
+  Let $\theta$ denote the hidden volatility parameters, $\sigma$ for flat and
+  $(\sigma_0, b, c)$ for smile volatility, and $\sigma_\theta(m)$ the resulting volatility.
+  Prompts follow \eqref{prompt} with $D_\mathcal{X} = \mathcal{N}(0, I_2)$ as in
+  \cite{garg2022what}, and $D_\mathcal{F}$ the distribution of $f_\theta$ for $\theta$ drawn
+  from the prior, so each prompt corresponds to one stock with $\theta$ drawn once. The
+  inputs are mapped to option features
+  \begin{equation}
+    m(x) = 0.2\,x^{(1)}, \qquad T(x) = 0.1 + 1.9\,\Phi(x^{(2)}) \in [0.1, 2],
+    \label{features}
+  \end{equation}
+  which the transformer must learn during training. The target $f_\theta(x)$ is the price
+  $C/S$ from \eqref{bs}, evaluated at $m(x)$, $T(x)$ and $\sigma = \sigma_\theta(m(x))$, and
+  standardised by the mean and standard deviation of $C/S$ under the prior
+  (Appendix~\ref{app:stand_price}). We write $y_i = f_\theta(x_i) + \varepsilon_i$ for the
+  prices in the prompt, with $\varepsilon_i = 0$ unless stated otherwise, which recovers
+  \eqref{prompt}.
 
-\begin{table}[h]
-\caption{Input encoding for the Black--Scholes tasks ($d = 2$).}
-\label{tab:bs-inputs}
-\centering
-\small
-\begin{tabular}{lll}
-\toprule
-Input & Option feature & Meaning \\
-\midrule
-$x^{(1)}$ & log-moneyness $m = 0.2\,x^{(1)}$
-  & strike relative to today's price, $m = \ln(K/S)$ \\
-$x^{(2)}$ & maturity $T = 0.1 + 1.9\,\Phi(x^{(2)})$
-  & years until expiry, $T \in [0.1, 2]$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+  \paragraph{Training.}
+  We use the training setup of \cite{garg2022what}, minimising \eqref{objective}, except
+  that the curriculum only increases the number of examples, since $d = 2$ is fixed.
 
-The target $f_\theta(x)$ is the price $C/S$ from equation \eqref{bs}, evaluated at
-$m(x)$, $T(x)$ and $\sigma = \sigma_\theta(m(x))$, and standardised by its mean and
-standard deviation under the prior.\footnote{We standardise for two reasons. First,
-it gives an interpretable error: predicting the mean gives error $\approx 1$, so errors
-read as the fraction of price variance left unexplained. This plays the role of the
-normalisation by $d$ in \eqref{error}, which we therefore do not apply. Second, raw
-prices are small ($C/S \approx 0.14 \pm 0.10$) compared with the standard normal
-inputs, and standardising puts inputs and targets on the same scale.}
-The mean and standard deviation are fixed constants computed once by Monte Carlo
-($\mu = 0.145$, $s = 0.102$ for flat and $\mu = 0.141$, $s = 0.106$ for smile volatility):
-\begin{equation}
-y = \frac{C/S - \mu}{s}.
-\end{equation}
-Since the transformation is fixed and invertible, $C/S = s\,y + \mu$, and all baselines
-predict on the same scale, it does not change the task.
+  \paragraph{Evaluation and baselines.}
+  We report the error \eqref{error} without the factor $1/d$, which the standardisation
+  replaces. We compare against calibration, which fits the volatility parameters to the
+  in-context examples by least squares and prices the query with the fitted parameters,
+  \begin{equation}
+    \hat\theta = \arg\min_{\theta'} \sum_{i=1}^{k} \big(f_{\theta'}(x_i) - y_i\big)^2,
+    \qquad \hat y_{\text{query}} = f_{\hat\theta}(x_{\text{query}}).
+  \end{equation}
+  This mirrors how practitioners calibrate implied volatility. We solve it by grid search
+  followed by five rounds of local refinement. Since the pricing formula is the same in
+  every prompt, a transformer could also learn an average price surface in its weights
+  without using the context. We therefore report the prior-mean price
+  $\hat y_{\text{query}} = \mathbb{E}_{f \sim D_\mathcal{F}}[f(x_{\text{query}})]$ as a
+  no-context baseline. Only error below it is evidence of in-context learning.
 
-We compare the squared error of the transformer's prediction, without the normalisation
-by $d$, to a baseline calibration method, which fits the volatility parameters to the
-in-context examples by least squares and prices the query with the fitted parameters,
-\begin{equation}
-\hat\theta = \arg\min_{\theta'} \sum_{i=1}^{k} \big(f_{\theta'}(x_i) - y_i\big)^2,
-\qquad \hat y_{\text{query}} = f_{\hat\theta}(x_{\text{query}}),
-\end{equation}
-where $y_i = f_\theta(x_i)$ are the prices given in the prompt. This mirrors how
-practitioners calibrate implied volatility; we solve it by grid search followed by five
-rounds of local refinement. On clean prices, once the examples determine $\theta$
-($k \geq 1$ for flat, typically $k \geq 3$ for smile volatility), calibration recovers it
-and its error is zero in principle; with fewer examples, many curves fit exactly and least
-squares returns an arbitrary one. For smile volatility we also run calibration with a
-misspecified flat model: a transformer that only estimated one average volatility would
-level off at its error.
-
-Since the pricing formula is the same in every prompt, a transformer could also learn an
-average price surface in its weights without using the context. We therefore report the
-prior-mean price $\hat y_{\text{query}} = \mathbb{E}_\theta[f_\theta(x_{\text{query}})]$
-as a no-context baseline; only error below it is evidence of in-context learning.
-
-We evaluate on clean prices and, as for noisy linear regression in \cite{garg2022what}, on
-noisy prices: $\varepsilon \sim \mathcal{N}(0, \tau^2)$, $\tau = 0.05$, is added to the
-standardised prices of the examples and the query, simulating bid--ask noise. Since the
-query's noise is unpredictable, no method can go below $\tau^2 = 0.0025$; the model is
-trained on clean prices only. Finally, as for input scaling in \cite{garg2022what}, we
-scale the moneyness input $x^{(1)}$ by 2 and 3 without retraining. Only 5\% of training
-options have $|m| > 0.4$; under scaling by 3, half do, and 5\% have $|m| > 1.2$, where the
-model has practically never been trained.
+  \paragraph{Noisy prices and wider moneyness.}
+  As for noisy linear regression in \cite{garg2022what}, we also evaluate on noisy prices,
+  with $\varepsilon_i \sim \mathcal{N}(0, \tau^2)$, $\tau = 0.05$, added to the standardised
+  prices of the examples and the query, simulating bid--ask noise. The error is then
+  measured against the noisy query price $y_{\text{query}}$. Since its noise is
+  unpredictable, the expected error cannot go below $\tau^2 = 0.0025$. The model is trained
+  on clean prices only. Finally, as for input scaling in \cite{garg2022what}, we evaluate
+  without retraining with $D_\mathcal{X} = \mathcal{N}(0, \operatorname{diag}(s^2, 1))$,
+  $s \in \{2, 3\}$, i.e.\ moneyness scaled by $s$. Only 5\% of training options have
+  $|m| > 0.4$. Under scaling by 3, half do, and 5\% have $|m| > 1.2$, where the model has
+  practically never been trained.
 
 \subsection{Results}
 
 \paragraph{Flat and smile volatility.}
-\textbf{[How to read the numbers: what error 1 means, and why the prior mean, not 1,
-is the bar for in-context learning.]}
-In both tasks the transformer starts at the prior mean without examples and falls far
-below it after a single example (Table~\ref{tab:bs-results}). With flat volatility it
-stays above calibration for all $k$, and both level off after a few examples, the
-transformer about an order of magnitude higher. With smile volatility the transformer
-goes far below misspecified flat calibration, which levels off early. Compared with
-smile calibration, it has lower error up to $k \approx 18$, the two are comparable up to
-$k \approx 25$, and calibration is lower beyond (Figure~\ref{fig:bs-smile-noise}, left).
-\textbf{[Interpretation: what $k=0$ vs.\ $k=1$ shows; why both level off above zero;
-what the gap to flat calibration shows; why the transformer beats smile calibration,
-and why only up to $k \approx 18$.]}
+Without examples ($k=0$) the transformer's error matches that of the prior mean, and
+after a single example it falls far below it (Table~\ref{tab:bs-results}). Since the
+prior mean is the best prediction that ignores the context, this drop shows that the
+transformer uses the example rather than relying on its weights alone. With flat
+volatility the transformer stays above calibration for all $k$; both level off after a
+few examples, the transformer about an order of magnitude higher. With smile volatility
+the transformer goes far below misspecified flat calibration, which levels off early.
+Against smile calibration, the transformer has lower error up to $k \approx 18$, the two
+are comparable for $k \approx 19$--$25$, and calibration is lower from about $k \approx 27$
+(Figure~\ref{fig:bs-smile-noise}, left). With enough examples the grid search pins down
+the parameters accurately, while the transformer's error plateaus. Its error also
+fluctuates less between neighbouring $k$ than calibration's.
 
 \begin{table}[h]
-\caption{\textbf{[YOUR caption: what the table shows + key take-away]}}
+\caption{Error against number of in-context examples $k$ for flat and smile volatility,
+comparing the transformer with the prior mean and with flat and smile calibration.}
 \label{tab:bs-results}
 \centering
 \small
@@ -138,56 +113,80 @@ and why only up to $k \approx 18$.]}
 
 \paragraph{Noisy prices.}
 At $k=40$ the transformer reaches $2.7\cdot10^{-3}$ on flat and $3.4\cdot10^{-3}$ on smile
-volatility, against $2.5\cdot10^{-3}$ and $2.6\cdot10^{-3}$ for calibration and a floor of
-$\tau^2 = 2.5\cdot10^{-3}$ (Figure~\ref{fig:bs-smile-noise}, right). At $k=1$ on smile
-volatility the transformer is lower than calibration ($2.1\cdot10^{-2}$ vs.\ $3.4\cdot10^{-2}$).
-\textbf{[Why do noisy errors keep falling with $k$ but never below $\tau^2$? What does it
-mean that a model trained on clean prices gets this close?]}
+volatility, against $2.5\cdot10^{-3}$ and $2.6\cdot10^{-3}$ for calibration
+(Figure~\ref{fig:bs-smile-noise}, right). The noise cannot be predicted, so the expected
+error cannot go below the floor $\tau^2 = 2.5\cdot10^{-3}$. Calibration reaches it within
+sampling noise and the transformer comes close. With few examples the transformer is
+ahead: at $k=1$ on smile volatility its error is $2.1\cdot10^{-2}$ against
+$3.4\cdot10^{-2}$ for calibration.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.9\linewidth]{figures/bs_smile/clean_vs_noisy.png}
-\caption{\textbf{[YOUR caption: smile volatility; clean vs.\ noisy; gray dashed line =
-error 1; dotted line = noise floor $\tau^2$]}}
+\caption{Smile volatility, clean (left) and noisy (right) prices. Gray dashed line:
+error 1. Dotted line: noise floor $\tau^2$.}
 \label{fig:bs-smile-noise}
 \end{figure}
 
-\paragraph{Scaled moneyness.}
-On smile volatility (Figure~\ref{fig:bs-smile-scaling}), scaling by 2 leaves the
-transformer's error at $k=40$ at $7.0\cdot10^{-4}$, still far below the prior mean (0.060),
-but it stops improving after a few examples. Scaling by 3, it stays around $0.06$ for all
-$k$ ($0.063$ at $k=40$), only slightly below the prior mean ($0.100$). Smile calibration
-reaches at most $2.3\cdot10^{-6}$ in all cases, while misspecified flat calibration is
-worse than the prior mean at scale 3 ($0.28$). On flat volatility the failure is even
-clearer: at scale 3 the transformer's error ($0.082$) is above the prior mean ($0.073$) for
-all $k$, i.e.\ it does worse than ignoring the examples, while calibration reaches
-$6.3\cdot10^{-7}$.
-\textbf{[What has the transformer learned, given that it works at $\times 2$ and fails at
-$\times 3$? Why is calibration unaffected? Parallel to \cite{garg2022what}?]}
+\paragraph{Wider moneyness range.}
+At test time, without retraining, we multiply moneyness $m$ by 2 and 3, which evaluates
+the models on more extreme strikes. Unlike the input scaling of \cite{garg2022what},
+which multiplies all input dimensions, only $m$ is scaled, and it reaches the price
+through a nonlinear map. With smile volatility,
+$\sigma(m) = \sigma_0 + \text{skew}\cdot m + \text{curvature}\cdot m^2$ is also evaluated
+at larger $|m|$, so the volatilities leave the training range as well; with flat
+volatility $\sigma$ is unchanged. Prices are standardised with the training statistics,
+so errors are comparable across methods but are no longer fractions of the variance.
+
+On smile volatility (Figure~\ref{fig:bs-smile-scaling}), at scale 2 the transformer
+improves until about $k \approx 10$ ($1.8\cdot10^{-3}$) and then fluctuates around
+$10^{-3}$, far below the prior mean ($0.060$). At scale 3 it improves much more slowly,
+and for $k \geq 1$ its error is typically about half that of the prior mean, which itself
+varies between $0.10$ and $0.15$. Smile calibration has error at most $2.3\cdot10^{-6}$
+at $k=40$ under both scalings, while flat calibration is slightly worse than the prior
+mean at scale 2 ($0.071$ vs.\ $0.060$) and far worse at scale 3 ($0.28$). On flat
+volatility (Figure~\ref{fig:bs-flat-scaling}) the failure is clearer: at scale 3 the
+transformer's error crosses the prior mean's back and forth and is no better overall, so
+the examples give no benefit, while calibration reaches $6.3\cdot10^{-7}$.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.9\linewidth]{figures/bs_smile/moneyness_scaling.png}
-\caption{\textbf{[YOUR caption: smile volatility; moneyness scaled by 1, 2, 3 at test
-time without retraining; gray dashed line = error 1]}}
+\caption{Smile volatility with moneyness scaled by 1, 2 and 3 at test time, without
+retraining. Gray dashed line: error 1, i.e.\ predicting the same average price for every
+option; this interpretation holds only at scale 1.}
 \label{fig:bs-smile-scaling}
 \end{figure}
 
-\paragraph{Discussion and Limitations.}
-Finding 1: the transformer falls below the prior mean after one example, and far
-below flat calibration on smile volatility. What does each comparison rule out, i.e.\
-which ``lazy'' strategy would each have caught?
+\paragraph{Discussion.}
+The two baselines rule out two lazy strategies. Beating the prior mean after one example
+rules out ignoring the context and predicting the price averaged over volatilities for
+that option. Beating flat calibration on smile volatility rules out fitting a single
+implied volatility, i.e.\ treating the smile as flat. The transformer therefore uses the
+examples and adapts to the shape of the smile.
 
-Finding 2: on smile volatility the transformer beats calibration with the correct
-model up to $k \approx 18$. What does the transformer have that calibration lacks, and why
-does that advantage disappear at large $k$?
+On smile volatility the transformer beats correctly specified calibration up to
+$k \approx 18$. A likely explanation is that calibration fits each prompt from scratch,
+whereas the transformer has seen the training distribution of
+$(\sigma_0, \text{skew}, \text{curvature})$ and can use it as a prior, which stabilises
+the estimate when examples are few. As $k$ grows the examples dominate, calibration
+recovers the parameters through the exact formula, and the transformer is limited by its
+approximation error.
 
-Finding 3: at moneyness $\times 3$ the transformer stops improving, while
-calibration is unaffected. What does that say about what the transformer has learned:
-the Black--Scholes formula itself, or something else? How does it compare with linear
-regression under input scaling in \cite{garg2022what}?
+Under wider moneyness, correctly specified calibration is unaffected because the exact
+formula holds for any $m$. On smile volatility the transformer plateaus at $\times 2$,
+and at $\times 3$ it remains below the prior mean but far above calibration; on flat it
+is no better than the prior mean at $\times 3$. Flat volatility isolates the input shift,
+since $\sigma$ stays in range, and fails most clearly, so unfamiliar inputs alone are
+enough to break the model. This suggests that the transformer has learned an
+approximation that holds within the training range rather than the Black--Scholes
+formula itself. It parallels linear regression in \cite{garg2022what}, where the
+transformer degrades under input scaling while least squares does not.
 
-Limitations: finish ``Because of this, we cannot claim that \ldots'' for
-(i) one training run per task without a fixed seed;
-(ii) no posterior-mean (Bayes-optimal) baseline;
-(iii) the pricing formula and $r$ are the same in every prompt.
+\paragraph{Limitations.}
+Each task was trained once without a fixed seed, so we cannot claim that the
+transformer's advantage up to $k \approx 18$ is robust to training randomness. Without a
+posterior-mean (Bayes-optimal) baseline, we cannot say how close the transformer is to
+optimal, nor confirm that its advantage at small $k$ comes from using the prior. Finally,
+the pricing formula and $r$ are the same in every prompt, so the formula may be stored in
+the weights, and what is inferred in context may be only the volatility parameters.

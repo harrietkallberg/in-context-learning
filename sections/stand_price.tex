@@ -1,0 +1,25 @@
+ \paragraph{Standardisation of prices.}
+  The target is the standardised call price
+  \begin{equation}
+    f_\theta(x) = \frac{C/S - \mu}{s}, \qquad
+    \mu = \mathbb{E}_{\theta, x}[C/S], \qquad
+    s^2 = \operatorname{Var}_{\theta, x}(C/S),
+  \end{equation}
+  where $C/S$ is evaluated at the features $(m, T)$ of $x$, and the expectation and
+  variance are over $\theta$ drawn from the prior and $x \sim \mathcal{N}(0, I_2)$. We
+  estimate $\mu$ and $s$ once by Monte Carlo with $4096 \times 64$ samples and keep them
+  fixed during training and evaluation. This gives $\mu = 0.145$, $s = 0.102$ for flat
+  volatility and $\mu = 0.141$, $s = 0.106$ for smile volatility. Prices are recovered as
+  $C/S = \mu + s\, f_\theta(x)$.
+
+  We standardise because it gives an interpretable error. Predicting the mean price,
+  i.e.\ $0$ on the standardised scale, gives
+  \begin{equation}
+    \mathbb{E}\big[(f_\theta(x) - 0)^2\big] = \operatorname{Var}\big(f_\theta(x)\big) = 1,
+  \end{equation}
+  so errors read as the fraction of price variance left unexplained. This holds only on
+  the training distribution, not under the wider moneyness of
+  Section~\ref{…}. Standardising plays the role of the normalisation by $d$ in
+  \eqref{error}, which we therefore do not apply. It also puts inputs and targets on the
+  same scale, since raw prices ($C/S \approx \mu \pm s$) are small compared with the
+  standard normal inputs.

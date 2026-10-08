@@ -1,90 +1,59 @@
 \section{Reproduction of ICL of linear functions}
 % (b) your reproduction, with a short log of what the paper left unspecified and what you had to guess
 
-In this section we reproduce some results obtained by \cite{garg2022what} on ICL of
-linear functions.
-
 \subsection{Setup}
-We train our own transformer from scratch on an NVIDIA A100 via Modal, following the
-setup described in the paper, and evaluate it using the same framework: the same model
-(GPT-2, 12 layers, 8 heads, 256-dimensional embeddings), optimiser, curriculum and number
-of training steps, and the same evaluation over 1280 prompts with 90\% bootstrap
-confidence intervals. The following points were left unspecified by the paper or differ
-in our reproduction:
-\begin{itemize}
-\item \textbf{Number of runs.} The paper does not state how many models were trained for
-  its main results, and the authors released one checkpoint per task. We train a single
-  run. Neither the paper's code nor ours fixes a random seed, so our error bars reflect
-  variation over evaluation prompts only, not over training runs.
-\item \textbf{Noise level.} The noise in noisy linear regression is stated as
-  $\mathcal{N}(0, 1)$ in Section~4 of the paper and as $\mathcal{N}(0, d/20)$ in
-  Appendix~B.2. These coincide for $d = 20$, which we use.
-\item \textbf{Software.} We use Python 3.10 instead of 3.8 and a newer version of the
-  logging library wandb, since the original versions are no longer supported by our
-  platform; PyTorch 1.11 and transformers 4.17 are as in the paper.
-\item \textbf{Hardware.} We train on an NVIDIA A100 instead of an RTX 3090, which takes
-  about 5 hours instead of 7 for linear regression.
-\end{itemize}
+We train our own transformer from scratch on an NVIDIA A100 via Modal, using the same
+model, optimiser, curriculum and
+number of training steps as \cite{garg2022what}. As in the paper, we evaluate on 1280
+prompts with 90\% bootstrap confidence intervals.
+
+The paper does not state how many training runs its main results are based on, and the
+authors released one checkpoint per task. We train a single run. Since neither their code
+nor ours fixes a random seed, our error bars reflect variation over evaluation prompts
+only. Otherwise we differ only in software (Python 3.10 instead of 3.8) and hardware
+(A100 instead of RTX 3090), which change neither the model nor the training procedure.
 
 \subsection{Results}
 
-  \paragraph{Clean labels.}
-  Our trained transformer outperforms 3-NN and averaging on both clean and noisy labels.
-  Its error closely tracks that of minimum-norm least squares on clean labels, see
-  Figure~\ref{fig:linear} and Table~\ref{tab:linear-repro}.
-  \textbf{[What happens at $k = d = 20$, for least squares and for the transformer?]}
+\paragraph{Clean labels.}
+The transformer outperforms 3-NN and averaging, and its error closely tracks that of
+minimum-norm least squares (Figure~\ref{fig:linear}, Table~\ref{tab:linear-repro}),
+including the drop to zero error at $k \geq 20$, where the 20-dimensional problem is
+fully determined and least squares has a unique solution.
 
-  \begin{figure}[h]
+\paragraph{Noisy labels.}
+With noisy labels, the transformer still outperforms 3-NN and averaging, and reproduces
+the double descent curve (Figure~\ref{fig:noisy}). For minimum-norm least squares, this
+curve appears when test error is plotted against the number of noisy training samples
+$n$ for a fixed number of features $p$ (here $n = k$, $p = d = 20$). For $n < p$, the
+system is underdetermined. Among the infinitely many exact fits, the minimum-norm
+solution keeps the weights small and spreads the noise over many directions, so
+predictions on new data stay reasonable. At $n = p$, the fit is unique and must pass
+through every noisy label. This requires large weights, which turn label noise into large
+test errors, so the error peaks. For $n > p$, the problem is overdetermined and the noise
+averages out as $n$ grows. Interestingly, the transformer handles the peak at $n = p$
+better than minimum-norm least squares. This possibly suggests some kind of
+regularisation of the in-context learned weights that keeps them from taking extreme
+values.
+
+\paragraph{Comparison with the released checkpoints.}
+Our transformer performs like the checkpoints released by \cite{garg2022what}, up to
+random variation; see Appendix~\ref{app:reproduction}.
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[t]{0.38\textwidth}
   \centering
-  \begin{subfigure}[t]{0.39\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{figures/standard_repr_cropped.png}
-    \caption{Linear functions}
-    \label{fig:linear}
-  \end{subfigure}
-  \begin{subfigure}[t]{0.6\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{figures/noisyLR_repr_cropped.png}
-    \caption{Noisy linear regression}
-    \label{fig:noisy}
-  \end{subfigure}
-  \caption{In-context learning performance of the trained transformer for ICL of linear
-  functions.}
-  \label{fig:repr}
-  \end{figure}
-
-  \begin{table}[h]
+  \includegraphics[width=\linewidth]{figures/standard_repr_cropped.png}
+  \caption{Clean labels}
+  \label{fig:linear}
+\end{subfigure}\hfill
+\begin{subfigure}[t]{0.58\textwidth}
   \centering
-  \small
-  \input{tables/linear_repro.tex}
-  \caption{\textbf{[YOUR caption: squared error divided by $d$; our run vs.\ the authors'
-  released checkpoint vs.\ least squares, after $k$ in-context examples]}}
-  \label{tab:linear-repro}
-  \end{table}
-
-  \paragraph{Noisy labels.}
-  For noisy labels, the transformer reproduces the double descent curve, see
-  Figure~\ref{fig:noisy}.
-  \textbf{[Revise: in Table~\ref{tab:linear-repro} the transformer's error rises from 0.47
-  at $k=15$ to 0.86 at $k=20$, while least squares rises to 1959. How would you describe
-  the transformer's peak?]}
-  For minimum norm least squares, the double descent curve appears when plotting test error
-  against the number of noisy training samples $n$, for a fixed number of features $p$
-  (here $n = k$ and $p = d = 20$).
-  For $n < p$, the system is underdetermined and there are infinitely many ways to fit the
-  training data exactly, but the minimum-norm solution is chosen. It keeps the weights small,
-  effectively spreading the noise over many directions, so predictions on new data stay
-  reasonable. As $n$ increases toward $p$, this freedom disappears. At $n = p$ there is a
-  unique way to fit the data, so the model is forced to pass through every noisy label. It
-  needs large weights, which turn the noise in the training labels into large errors on new
-  data, so test error peaks. For $n > p$, the problem is overdetermined and least squares
-  improves as $n$ grows, because label noise averages out.
-
-  \paragraph{Comparison with the released checkpoint.}
-  \textbf{[Our run vs.\ the authors' released checkpoint across all evaluations in
-  Table~\ref{tab:linear-repro}: how close are they, and does that count as reproduced,
-  given one unseeded run each (see Setup)?]}
-
-  \paragraph{What this reproduction does not show.}
-  \textbf{[We reproduce linear regression only (not sparse, trees, ReLU nets), one model
-  size, one run per model.]}
+  \includegraphics[width=\linewidth]{figures/noisyLR_repr_cropped.png}
+  \caption{Noisy labels}
+  \label{fig:noisy}
+\end{subfigure}
+\caption{ICL performance of our trained transformer on linear functions.}
+\label{fig:repr}
+\end{figure}
