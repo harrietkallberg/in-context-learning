@@ -98,7 +98,7 @@ higher. With smile volatility it goes far below misspecified flat calibration, w
 levels off early. Against smile calibration, the transformer has lower error up to
 $k \approx 18$, the two are comparable for $k \approx 19$--$25$, and calibration is lower
 from about $k \approx 27$, as the transformer's error plateaus
-(Figure~\ref{fig:bs-smile-noise}, left). Its error also fluctuates less between
+(Figure~\ref{fig:bs-smile}, first panel). Its error also fluctuates less between
 neighbouring $k$ than calibration's.
 
 \begin{table}[h]
@@ -113,23 +113,25 @@ comparing the transformer with the prior mean and with flat and smile calibratio
 \paragraph{Noisy prices.}
 At $k=40$ the transformer reaches $2.7\cdot10^{-3}$ on flat and $3.4\cdot10^{-3}$ on smile
 volatility, against $2.5\cdot10^{-3}$ and $2.6\cdot10^{-3}$ for calibration
-(Figure~\ref{fig:bs-smile-noise}, right). Calibration reaches the noise floor
+(Figure~\ref{fig:bs-smile}, second panel). Calibration reaches the noise floor
 $\tau^2 = 2.5\cdot10^{-3}$ within sampling noise and the transformer comes close. With
 few examples the transformer is ahead: at $k=1$ on smile volatility its error is $2.1\cdot10^{-2}$ against
 $3.4\cdot10^{-2}$ for calibration.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.9\linewidth]{figures/bs_smile/clean_vs_noisy.png}
-\caption{Smile volatility, clean (left) and noisy (right) prices. Gray dashed line:
-error 1. Dotted line: noise floor $\tau^2$.}
-\label{fig:bs-smile-noise}
+\includegraphics[width=\linewidth]{figures/bs_smile/combined.png}
+\caption{Smile volatility: clean and noisy prices, and moneyness scaled by 2 and 3 at
+test time without retraining. Gray dashed line: error 1, i.e.\ predicting the same
+average price for every option; this interpretation holds only for clean and noisy
+prices. Dotted line: noise floor $\tau^2$.}
+\label{fig:bs-smile}
 \end{figure}
 
 \paragraph{Wider moneyness range.}
 With smile volatility, $\sigma_\theta(m)$ is evaluated at larger $|m|$, so the
 volatilities also leave the training range; with flat volatility $\sigma$ is unchanged.
-On smile volatility (Figure~\ref{fig:bs-smile-scaling}), at scale 2 the transformer
+On smile volatility (Figure~\ref{fig:bs-smile}, last two panels), at scale 2 the transformer
 improves until about $k \approx 10$ ($1.8\cdot10^{-3}$) and then fluctuates around
 $10^{-3}$, far below the prior mean ($0.060$). At scale 3 it improves much more slowly,
 and for $k \geq 1$ its error is typically about half that of the prior mean, which itself
@@ -139,15 +141,6 @@ mean at scale 2 ($0.071$ vs.\ $0.060$) and far worse at scale 3 ($0.28$). On fla
 volatility the failure is clearer: at scale 3 the transformer's error crosses the prior
 mean's back and forth and is no better overall, while calibration reaches
 $6.3\cdot10^{-7}$.
-
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.9\linewidth]{figures/bs_smile/moneyness_scaling.png}
-\caption{Smile volatility with moneyness scaled by 1, 2 and 3 at test time, without
-retraining. Gray dashed line: error 1, i.e.\ predicting the same average price for every
-option; this interpretation holds only at scale 1.}
-\label{fig:bs-smile-scaling}
-\end{figure}
 
 \subsection{Discussion}
 The two baselines rule out two lazy strategies. Beating the prior mean after one example
