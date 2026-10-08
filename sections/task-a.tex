@@ -1,6 +1,7 @@
+\vspace{-0.5em}
  \section{A review of \citet{garg2022what}}
 
-\vspace{-1em}
+\vspace{-0.5em}
   \paragraph{Hypothesis.} The paper hypothesises that transformers trained on a function
   class, such as linear functions, sparse linear functions, two-layer neural networks or
   decision trees, encode a non-trivial learning algorithm within a single forward pass.
@@ -11,7 +12,7 @@
   work. Instead, the model must infer $w$ from the pairs $\{(x_i, f(x_i))\}_{i=1}^k$ to
   predict $f(x_{\text{query}})$.
 
-\vspace{-0em}
+\vspace{-0.5em}
   \paragraph{Formulation.} Let $D_\mathcal{X}$ be a distribution over inputs and
   $D_\mathcal{F}$ a distribution over functions in $\mathcal{F}$. A prompt is a sequence
   of input-output pairs followed by a query,
@@ -26,6 +27,7 @@
     \mathbb{E}_P\!\left[\ell\big(M(P), f(x_{\text{query}})\big)\right] \le \epsilon.
   \end{equation}
 
+\vspace{-0.5em}
   \paragraph{Training.} A decoder-only GPT-2 style transformer $M$ (12 layers, 8 heads,
   256-dimensional embeddings, 9.5M parameters) is trained from scratch. At each step, a
   function $f$ and inputs $x_i$ are sampled, and the model predicts $f(x_{i+1})$ from every

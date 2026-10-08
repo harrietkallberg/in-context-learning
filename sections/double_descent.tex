@@ -1,0 +1,7 @@
+For $n < p$, the
+system is underdetermined. Among the infinitely many exact fits, the minimum-norm
+solution keeps the weights small and spreads the noise over many directions, so
+predictions on new data stay reasonable. At $n = p$, the fit is unique and must pass
+through every noisy label. This requires large weights, which turn label noise into large
+test errors, so the error peaks. For $n > p$, the problem is overdetermined and the noise
+averages out as $n$ grows.

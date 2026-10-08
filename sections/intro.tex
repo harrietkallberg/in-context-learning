@@ -1,4 +1,11 @@
+\vspace{-0.5em}
 \section{Introduction}
-In-Context Learning (ICL) refers to the ability of a machine learning model to solve a task conditioned on examples of input-output pairs given in the prompt at inference time, without any updates to the model weights. So the ``learning'' (of weights $w$ for linear $f(x)=w^\top x$ for example) happens in the activations during the forward pass, while the weights of the model only encode the optimization algorithm. An intuitive example motivating how transformers can encode optimization procedures, such as gradient descent is presented by \cite{vonOswald2023Transformers}, who show that one layer of linear attention exactly corresponds to one step of gradient descent. We present a motivation in appendix \ref{app:motivation}. 
-
+\vspace{-1em}
+In-context learning (ICL) is the ability of a model to solve a task from input--output
+examples given in the prompt at inference time, without updating its weights. The
+``learning'', e.g.\ of $w$ for a linear $f(x)=w^\top x$, happens in the activations
+during the forward pass, while the weights only encode the optimisation algorithm. For
+example, \cite{vonOswald2023Transformers} show that one layer of linear attention
+corresponds exactly to one step of gradient descent; we give a simpler motivation in
+Appendix~\ref{app:motivation}.
 
