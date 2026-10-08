@@ -121,7 +121,7 @@ sampling noise and the transformer comes close. With few examples the transforme
 ahead: at $k=1$ on smile volatility its error is $2.1\cdot10^{-2}$ against
 $3.4\cdot10^{-2}$ for calibration.
 
-\begin{figure}[h]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.9\linewidth]{figures/bs_smile/clean_vs_noisy.png}
 \caption{Smile volatility, clean (left) and noisy (right) prices. Gray dashed line:
@@ -159,7 +159,7 @@ option; this interpretation holds only at scale 1.}
 \label{fig:bs-smile-scaling}
 \end{figure}
 
-\paragraph{Discussion.}
+\subsection{Discussion}
 The two baselines rule out two lazy strategies. Beating the prior mean after one example
 rules out ignoring the context and predicting the price averaged over volatilities for
 that option. Beating flat calibration on smile volatility rules out fitting a single
