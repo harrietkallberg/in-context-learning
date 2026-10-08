@@ -130,66 +130,80 @@ $|m| > 1.2$, where the model has practically never been trained.
 
 \subsection{Results}
 
-  \textbf{[How to read the numbers: what error 1 means, and why the prior mean, not 1,
-  is the bar for in-context learning.]}
+\paragraph{Flat and smile volatility.}
+\textbf{[How to read the numbers: what error 1 means, and why the prior mean, not 1,
+is the bar for in-context learning.]}
+In both tasks the transformer starts at the prior mean without examples and falls far
+below it after a single example (Table~\ref{tab:bs-results}). With flat volatility it
+stays above calibration for all $k$, and both level off after a few examples, the
+transformer about an order of magnitude higher. With smile volatility the transformer
+goes far below misspecified flat calibration, which levels off early. Compared with
+smile calibration, it has lower error up to $k \approx 18$, the two are comparable up to
+$k \approx 25$, and calibration is lower beyond (Figure~\ref{fig:bs-smile-noise}, left).
+\textbf{[Interpretation: what $k=0$ vs.\ $k=1$ shows; why both level off above zero;
+what the gap to flat calibration shows; why the transformer beats smile calibration,
+and why only up to $k \approx 18$.]}
 
-  \begin{table}[h]
-  \caption{\textbf{[YOUR caption: what the table shows + key take-away]}}
-  \label{tab:bs-results}
-  \centering
-  \small
-  \input{tables/bs_results.tex}
-  \end{table}
+\begin{table}[h]
+\caption{\textbf{[YOUR caption: what the table shows + key take-away]}}
+\label{tab:bs-results}
+\centering
+\small
+\input{tables/bs_results.tex}
+\end{table}
 
-  \paragraph{Flat volatility.}
-  Without examples, the transformer's error (0.146) matches the prior mean (0.157).
-  After one example it drops to $3.4\cdot10^{-3}$, and to $7.2\cdot10^{-5}$ after three.
-  Calibration reaches $1.1\cdot10^{-4}$ at $k=1$ and levels off at $1.2\cdot10^{-6}$ from $k=3$;
-  the transformer levels off around $1.8\cdot10^{-5}$.
-  \textbf{[What does $k=0$ vs.\ $k=1$ show? Why does calibration level off above zero?
-  Why might the transformer level off higher than calibration?]}
+\paragraph{Noisy prices.}
+At $k=40$ the transformer reaches $2.7\cdot10^{-3}$ on flat and $3.4\cdot10^{-3}$ on smile
+volatility, against $2.5\cdot10^{-3}$ and $2.6\cdot10^{-3}$ for calibration and a floor of
+$\tau^2 = 2.5\cdot10^{-3}$ (Figure~\ref{fig:bs-smile-noise}, right). At $k=1$ on smile
+volatility the transformer is lower than calibration ($2.1\cdot10^{-2}$ vs.\ $3.4\cdot10^{-2}$).
+\textbf{[Why do noisy errors keep falling with $k$ but never below $\tau^2$? What does it
+mean that a model trained on clean prices gets this close?]}
 
-  \paragraph{Smile volatility.}
-  Flat calibration levels off at $1.5\cdot10^{-2}$, while the transformer reaches
-  $1.5\cdot10^{-5}$ at $k=40$ (Figure~\ref{fig:bs-smile}). The transformer has lower error
-  than smile calibration for $k \leq 18$ ($1.1\cdot10^{-2}$ vs.\ $2.1\cdot10^{-2}$ at $k=1$,
-  $3.9\cdot10^{-5}$ vs.\ $3.3\cdot10^{-4}$ at $k=10$), the two are comparable for
-  $19 \leq k \leq 25$, and calibration is lower beyond ($7.1\cdot10^{-6}$ vs.\ $1.5\cdot10^{-5}$
-  at $k=40$).
-  \textbf{[What does the gap to flat calibration show? Why can the transformer beat
-  calibration with the correct model, and why only up to $k \approx 18$?
-  (Hint: $k<3$ is underdetermined; what about $3 \leq k \leq 18$?)]}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\linewidth]{figures/bs_smile/clean_vs_noisy.png}
+\caption{\textbf{[YOUR caption: smile volatility; clean vs.\ noisy; gray dashed line =
+error 1; dotted line = noise floor $\tau^2$]}}
+\label{fig:bs-smile-noise}
+\end{figure}
 
-  \begin{figure}[h]
-  \centering
-  \includegraphics[width=0.9\linewidth]{figures/bs_smile/standard_repr.png}
-  \caption{\textbf{[YOUR caption]}}
-  \label{fig:bs-smile}
-  \end{figure}
+\paragraph{Scaled moneyness.}
+On smile volatility (Figure~\ref{fig:bs-smile-scaling}), scaling by 2 leaves the
+transformer's error at $k=40$ at $7.0\cdot10^{-4}$, still far below the prior mean (0.060),
+but it stops improving after a few examples. Scaling by 3, it stays around $0.06$ for all
+$k$ ($0.063$ at $k=40$), only slightly below the prior mean ($0.100$). Smile calibration
+reaches at most $2.3\cdot10^{-6}$ in all cases, while misspecified flat calibration is
+worse than the prior mean at scale 3 ($0.28$). On flat volatility the failure is even
+clearer: at scale 3 the transformer's error ($0.082$) is above the prior mean ($0.073$) for
+all $k$, i.e.\ it does worse than ignoring the examples, while calibration reaches
+$6.3\cdot10^{-7}$.
+\textbf{[What has the transformer learned, given that it works at $\times 2$ and fails at
+$\times 3$? Why is calibration unaffected? Parallel to \cite{garg2022what}?]}
 
-  \paragraph{Noisy prices.}
-  At $k=40$ the transformer reaches $2.7\cdot10^{-3}$ on flat and $3.4\cdot10^{-3}$ on smile
-  volatility, against $2.5\cdot10^{-3}$ and $2.6\cdot10^{-3}$ for calibration and a floor of
-  $\tau^2 = 2.5\cdot10^{-3}$. At $k=1$ on smile volatility the transformer is lower than
-  calibration ($2.1\cdot10^{-2}$ vs.\ $3.4\cdot10^{-2}$).
-  \textbf{[Why do noisy errors keep falling with $k$ but never below $\tau^2$? What does it
-  mean that a model trained on clean prices gets this close?]}
-   \begin{figure}[h]
-    \centering
-    \includegraphics[width=1.2\linewidth]{figures/bs_smile/clean_vs_noisy.png}
-    \caption{\textbf{[YOUR caption]}}
-    \label{fig:bs-smile}
-  \end{figure}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\linewidth]{figures/bs_smile/moneyness_scaling.png}
+\caption{\textbf{[YOUR caption: smile volatility; moneyness scaled by 1, 2, 3 at test
+time without retraining; gray dashed line = error 1]}}
+\label{fig:bs-smile-scaling}
+\end{figure}
 
-  \paragraph{Scaled moneyness.}
-  Scaling by 2, the transformer's error at $k=40$ is $4.6\cdot10^{-3}$ (flat) and
-  $7\cdot10^{-4}$ (smile), still far below the prior mean (0.098 and 0.060). Scaling by 3,
-  it is $0.082$ on flat volatility, above the prior mean ($0.073$), and $0.063$ on smile
-  volatility (prior mean $0.100$). Calibration stays below $10^{-6}$ in all cases.
-  \textbf{[What has the transformer learned, given that it works at $\times 2$ and fails at
-  $\times 3$? Why is calibration unaffected? Parallel to \cite{garg2022what}?]}
+\paragraph{Discussion and Limitations.}
+Finding 1: the transformer falls below the prior mean after one example, and far
+below flat calibration on smile volatility. What does each comparison rule out, i.e.\
+which ``lazy'' strategy would each have caught?
 
-  \paragraph{Limitations.}
-  \textbf{[What can we NOT conclude? E.g.\ one training run per task and no fixed seed;
-  synthetic Black--Scholes prices, not market data; fixed $r$ and pricing formula; smile
-  depends on strike only, not maturity; calibration limited by its optimiser.]}
+Finding 2: on smile volatility the transformer beats calibration with the correct
+model up to $k \approx 18$. What does the transformer have that calibration lacks, and why
+does that advantage disappear at large $k$?
+
+Finding 3: at moneyness $\times 3$ the transformer stops improving, while
+calibration is unaffected. What does that say about what the transformer has learned:
+the Black--Scholes formula itself, or something else? How does it compare with linear
+regression under input scaling in \cite{garg2022what}?
+
+Limitations: finish ``Because of this, we cannot claim that \ldots'' for
+(i) one training run per task without a fixed seed;
+(ii) no posterior-mean (Bayes-optimal) baseline;
+(iii) the pricing formula and $r$ are the same in every prompt.
