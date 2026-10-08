@@ -27,43 +27,64 @@ in our reproduction:
 \end{itemize}
 
 \subsection{Results}
-Our trained transformer outperforms 3-NN and averaging on both clean and noisy labels.
-Its error closely tracks that of minimum-norm least squares on clean labels, see
-Figure~\ref{fig:linear}. For noisy labels, the transformer reproduces the double descent
-curve, see Figure~\ref{fig:noisy}.
 
-\begin{figure}[h]
-\centering
-\begin{subfigure}[t]{0.39\textwidth}
+  \paragraph{Clean labels.}
+  Our trained transformer outperforms 3-NN and averaging on both clean and noisy labels.
+  Its error closely tracks that of minimum-norm least squares on clean labels, see
+  Figure~\ref{fig:linear} and Table~\ref{tab:linear-repro}.
+  \textbf{[What happens at $k = d = 20$, for least squares and for the transformer?]}
+
+  \begin{figure}[h]
   \centering
-  \includegraphics[width=\linewidth]{figures/standard_repr_cropped.png}
-  \caption{Linear functions}
-  \label{fig:linear}
-\end{subfigure}
-\begin{subfigure}[t]{0.6\textwidth}
+  \begin{subfigure}[t]{0.39\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/standard_repr_cropped.png}
+    \caption{Linear functions}
+    \label{fig:linear}
+  \end{subfigure}
+  \begin{subfigure}[t]{0.6\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/noisyLR_repr_cropped.png}
+    \caption{Noisy linear regression}
+    \label{fig:noisy}
+  \end{subfigure}
+  \caption{In-context learning performance of the trained transformer for ICL of linear
+  functions.}
+  \label{fig:repr}
+  \end{figure}
+
+  \begin{table}[h]
   \centering
-  \includegraphics[width=\linewidth]{figures/noisyLR_repr_cropped.png}
-  \caption{Noisy linear regression}
-  \label{fig:noisy}
-\end{subfigure}
-\caption{In-context learning performance of the trained transformer for ICL of linear
-functions.}
-\label{fig:repr}
-\end{figure}
+  \small
+  \input{tables/linear_repro.tex}
+  \caption{\textbf{[YOUR caption: squared error divided by $d$; our run vs.\ the authors'
+  released checkpoint vs.\ least squares, after $k$ in-context examples]}}
+  \label{tab:linear-repro}
+  \end{table}
 
-For minimum norm least squares, the double descent curve appears when plotting test error
-against the number of noisy training samples $n$, for a fixed number of features $p$.
-For $n < p$, the system is underdetermined and there are infinitely many ways to fit the
-training data exactly, but the minimum-norm solution is chosen. It keeps the weights small,
-effectively spreading the noise over many directions, so predictions on new data stay
-reasonable. As $n$ increases toward $p$, this freedom disappears. At $n = p$ there is a
-unique way to fit the data, so the model is forced to pass through every noisy label. It
-needs large weights, which turn the noise in the training labels into large errors on new
-data, so test error peaks. For $n > p$, the problem is overdetermined and least squares
-improves as $n$ grows, because label noise averages out.
+  \paragraph{Noisy labels.}
+  For noisy labels, the transformer reproduces the double descent curve, see
+  Figure~\ref{fig:noisy}.
+  \textbf{[Revise: in Table~\ref{tab:linear-repro} the transformer's error rises from 0.47
+  at $k=15$ to 0.86 at $k=20$, while least squares rises to 1959. How would you describe
+  the transformer's peak?]}
+  For minimum norm least squares, the double descent curve appears when plotting test error
+  against the number of noisy training samples $n$, for a fixed number of features $p$
+  (here $n = k$ and $p = d = 20$).
+  For $n < p$, the system is underdetermined and there are infinitely many ways to fit the
+  training data exactly, but the minimum-norm solution is chosen. It keeps the weights small,
+  effectively spreading the noise over many directions, so predictions on new data stay
+  reasonable. As $n$ increases toward $p$, this freedom disappears. At $n = p$ there is a
+  unique way to fit the data, so the model is forced to pass through every noisy label. It
+  needs large weights, which turn the noise in the training labels into large errors on new
+  data, so test error peaks. For $n > p$, the problem is overdetermined and least squares
+  improves as $n$ grows, because label noise averages out.
 
-\textbf{[Our run vs.\ the authors' released checkpoint: at $k=40$ our error is 0.014,
-theirs 0.012 (unnormalised). Does that count as reproduced, given one unseeded run each?]}
+  \paragraph{Comparison with the released checkpoint.}
+  \textbf{[Our run vs.\ the authors' released checkpoint across all evaluations in
+  Table~\ref{tab:linear-repro}: how close are they, and does that count as reproduced,
+  given one unseeded run each (see Setup)?]}
 
-\textbf{[What this reproduction does NOT show: we reproduce linear regression only (not
-sparse, trees, ReLU nets), one model size, one run.]}
+  \paragraph{What this reproduction does not show.}
+  \textbf{[We reproduce linear regression only (not sparse, trees, ReLU nets), one model
+  size, one run per model.]}

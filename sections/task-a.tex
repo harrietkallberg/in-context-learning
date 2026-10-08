@@ -12,22 +12,16 @@ function's value at a new query input. ICL is hard to study in LLMs, so the pape
 controlled setting to study the phenomenon in transformers only. Concretely for linear
 functions, given a set of pairs $\{(x_i, f(x_i))\}_{i=1}^k$ from $f(x)=w^\top x$, a
 transformer encodes an algorithm which lets it infer the weights $w$ to predict
-$f(x_{k+1})$, resembling least squares. The paper empirically claims that the transformer
-achieves error comparable to the optimal least-squares estimator, suggesting that it
-encodes an effective learning algorithm. Since training data comes from linear functions
-with different weights, learning least squares regression would be a plausible way for the
-model to score good results in training rather than fitting its weights to predict a
-single linear function.
+$f(x_{k+1})$, resembling least squares. Since every prompt uses a new $w$, memorising a
+single function cannot work; the model has to learn how to infer $w$ from the examples.
 
-Below we describe the mathematical formulation, training and evaluation procedure used by
-\cite{garg2022what} to test their hypothesis.
-
-Let $D_\mathcal{X}$ be a distribution over inputs and $D_\mathcal{F}$ a distribution over
-functions in $\mathcal{F}$. A prompt is a set of pairs $(x_i, f(x_i))$ and a query:
-\begin{equation}
-  P =(x_1, f(x_1), \dots, x_k, f(x_k), x_{\text{query}}),
-  \label{prompt}
-\end{equation}
+\paragraph{Formulation.} Let $D_\mathcal{X}$ be a distribution over inputs and
+  $D_\mathcal{F}$ a distribution over functions in $\mathcal{F}$. A prompt is a sequence of
+  pairs $(x_i, f(x_i))$ followed by a query:
+  \begin{equation}
+    P =(x_1, f(x_1), \dots, x_k, f(x_k), x_{\text{query}}),
+    \label{prompt}
+  \end{equation}
 with $x_i, x_{\text{query}} \sim D_\mathcal{X}$ i.i.d.\ and $f \sim D_\mathcal{F}$.
 A model $M$ \emph{in-context learns} $\mathcal{F}$ up to $\epsilon$ if for some loss
 function $\ell$
